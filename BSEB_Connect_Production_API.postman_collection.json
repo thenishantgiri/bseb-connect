@@ -1,0 +1,680 @@
+{
+  "info": {
+    "_postman_id": "production-bseb-connect-2024",
+    "name": "BSEB Connect Production API",
+    "description": "Production API collection for BSEB Connect Backend deployed on AWS",
+    "schema": "https://schema.getpostman.com/json/collection/v2.1.0/collection.json"
+  },
+  "auth": {
+    "type": "bearer",
+    "bearer": [
+      {
+        "key": "token",
+        "value": "{{access_token}}",
+        "type": "string"
+      }
+    ]
+  },
+  "event": [
+    {
+      "listen": "prerequest",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Auto-set timestamp for requests",
+          "pm.variables.set('timestamp', new Date().toISOString());",
+          "",
+          "// Generate random email for testing",
+          "pm.variables.set('random_email', 'test' + Math.floor(Math.random() * 10000) + '@example.com');",
+          "",
+          "// Generate random phone",
+          "pm.variables.set('random_phone', '98' + Math.floor(Math.random() * 100000000));"
+        ]
+      }
+    },
+    {
+      "listen": "test",
+      "script": {
+        "type": "text/javascript",
+        "exec": [
+          "// Save tokens automatically",
+          "if (pm.response.json().access_token) {",
+          "    pm.environment.set('access_token', pm.response.json().access_token);",
+          "}",
+          "",
+          "if (pm.response.json().refresh_token) {",
+          "    pm.environment.set('refresh_token', pm.response.json().refresh_token);",
+          "}",
+          "",
+          "// Log response time",
+          "console.log('Response Time: ' + pm.response.responseTime + 'ms');"
+        ]
+      }
+    }
+  ],
+  "variable": [
+    {
+      "key": "base_url",
+      "value": "http://65.2.113.83",
+      "type": "string"
+    },
+    {
+      "key": "api_path",
+      "value": "/api",
+      "type": "string"
+    },
+    {
+      "key": "domain_url",
+      "value": "http://bseb-backend.mvpl.info",
+      "type": "string"
+    }
+  ],
+  "item": [
+    {
+      "name": "Health & Status",
+      "item": [
+        {
+          "name": "Check API Status",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}/",
+              "host": ["{{base_url}}"],
+              "path": [""]
+            }
+          }
+        },
+        {
+          "name": "Check API Root",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}",
+              "host": ["{{base_url}}{{api_path}}"]
+            }
+          }
+        },
+        {
+          "name": "Check with Domain",
+          "request": {
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{domain_url}}{{api_path}}",
+              "host": ["{{domain_url}}{{api_path}}"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Authentication",
+      "item": [
+        {
+          "name": "Register New User",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Registration successful', function () {",
+                  "    pm.response.to.have.status(201);",
+                  "});",
+                  "",
+                  "if (pm.response.code === 201) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('user_id', response.user.id);",
+                  "    pm.environment.set('user_email', response.user.email);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"{{random_email}}\",\n    \"password\": \"Test@123\",\n    \"name\": \"Test User\",\n    \"phone\": \"{{random_phone}}\",\n    \"studentClass\": \"10\",\n    \"schoolName\": \"Test School\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/register",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "register"]
+            }
+          }
+        },
+        {
+          "name": "Login with Password",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "pm.test('Login successful', function () {",
+                  "    pm.response.to.have.status(200);",
+                  "});",
+                  "",
+                  "const response = pm.response.json();",
+                  "if (response.access_token) {",
+                  "    pm.environment.set('access_token', response.access_token);",
+                  "    pm.environment.set('refresh_token', response.refresh_token);",
+                  "    console.log('Tokens saved to environment');",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\",\n    \"password\": \"Test@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/login/password",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "login", "password"]
+            }
+          }
+        },
+        {
+          "name": "Send Login OTP",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"identifier\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/login/otp",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "login", "otp"]
+            }
+          }
+        },
+        {
+          "name": "Verify Login OTP",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('access_token', response.access_token);",
+                  "    pm.environment.set('refresh_token', response.refresh_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"identifier\": \"test@example.com\",\n    \"otp\": \"123456\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/login/verify",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "login", "verify"]
+            }
+          }
+        },
+        {
+          "name": "Forgot Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"email\": \"test@example.com\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/password/forgot",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "password", "forgot"]
+            }
+          }
+        },
+        {
+          "name": "Reset Password",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"token\": \"reset-token-here\",\n    \"newPassword\": \"NewPassword@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/password/reset",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "password", "reset"]
+            }
+          }
+        },
+        {
+          "name": "Refresh Token",
+          "event": [
+            {
+              "listen": "test",
+              "script": {
+                "exec": [
+                  "if (pm.response.code === 200) {",
+                  "    const response = pm.response.json();",
+                  "    pm.environment.set('access_token', response.access_token);",
+                  "}"
+                ],
+                "type": "text/javascript"
+              }
+            }
+          ],
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "x-refresh-token",
+                "value": "{{refresh_token}}"
+              }
+            ],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/refresh",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "refresh"]
+            }
+          }
+        },
+        {
+          "name": "Logout",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/logout",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "logout"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Profile Management",
+      "item": [
+        {
+          "name": "Get Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile"]
+            }
+          }
+        },
+        {
+          "name": "Update Profile",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "PUT",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"name\": \"Updated Name\",\n    \"phone\": \"9876543210\",\n    \"schoolName\": \"Updated School\",\n    \"address\": \"New Address\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile"]
+            }
+          }
+        },
+        {
+          "name": "Upload Profile Photo",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "body": {
+              "mode": "formdata",
+              "formdata": [
+                {
+                  "key": "file",
+                  "type": "file",
+                  "src": ""
+                }
+              ]
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/photo",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "photo"]
+            }
+          }
+        },
+        {
+          "name": "Change Password",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"currentPassword\": \"Test@123\",\n    \"newPassword\": \"NewTest@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/change-password",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "change-password"]
+            }
+          }
+        },
+        {
+          "name": "Upgrade Class",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"newClass\": \"11\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/upgrade-class",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "upgrade-class"]
+            }
+          }
+        },
+        {
+          "name": "Delete Account",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"password\": \"Test@123\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "Session Management",
+      "item": [
+        {
+          "name": "Get All Sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "GET",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/sessions",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "sessions"]
+            }
+          }
+        },
+        {
+          "name": "Revoke Specific Session",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "DELETE",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/sessions/:sessionId",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "sessions", ":sessionId"],
+              "variable": [
+                {
+                  "key": "sessionId",
+                  "value": "session-id-here"
+                }
+              ]
+            }
+          }
+        },
+        {
+          "name": "Revoke Other Sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/sessions/revoke-others",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "sessions", "revoke-others"]
+            }
+          }
+        },
+        {
+          "name": "Revoke All Sessions",
+          "request": {
+            "auth": {
+              "type": "bearer",
+              "bearer": [
+                {
+                  "key": "token",
+                  "value": "{{access_token}}",
+                  "type": "string"
+                }
+              ]
+            },
+            "method": "POST",
+            "header": [],
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/profile/sessions/revoke-all",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["profile", "sessions", "revoke-all"]
+            }
+          }
+        }
+      ]
+    },
+    {
+      "name": "BSEB Integration",
+      "item": [
+        {
+          "name": "Verify BSEB Credentials",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"rollCode\": \"12345\",\n    \"rollNumber\": \"67890\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/verify-bseb-credentials",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "verify-bseb-credentials"]
+            }
+          }
+        },
+        {
+          "name": "Register with BSEB Link",
+          "request": {
+            "method": "POST",
+            "header": [
+              {
+                "key": "Content-Type",
+                "value": "application/json"
+              }
+            ],
+            "body": {
+              "mode": "raw",
+              "raw": "{\n    \"rollCode\": \"12345\",\n    \"rollNumber\": \"67890\",\n    \"email\": \"{{random_email}}\",\n    \"password\": \"Test@123\",\n    \"phone\": \"{{random_phone}}\"\n}"
+            },
+            "url": {
+              "raw": "{{base_url}}{{api_path}}/auth/register/bseb-linked",
+              "host": ["{{base_url}}{{api_path}}"],
+              "path": ["auth", "register", "bseb-linked"]
+            }
+          }
+        }
+      ]
+    }
+  ]
+}

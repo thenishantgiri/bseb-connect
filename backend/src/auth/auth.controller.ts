@@ -5,7 +5,7 @@ import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { MinioService } from '../minio/minio.service';
 import { FileValidationService } from '../common/file-validation.service';
-import { Msg91Service } from '../common/msg91.service';
+import { TwilioService } from '../common/twilio.service';
 import { SendOtpDto, VerifyOtpDto, LoginPasswordDto, ForgotPasswordDto, ResetPasswordDto, ChangePasswordDto } from './dto/auth.dto';
 import { RegisterDto } from './dto/register.dto';
 import { VerifyBsebCredentialsDto, LinkBsebAccountDto } from './dto/verify-bseb.dto';
@@ -16,7 +16,7 @@ export class AuthController {
     private authService: AuthService,
     private minioService: MinioService,
     private fileValidationService: FileValidationService,
-    private msg91Service: Msg91Service,
+    private twilioService: TwilioService,
   ) {}
 
   // SRS Requirement: Max 5 OTP requests per hour per user
@@ -113,107 +113,181 @@ export class AuthController {
     return this.authService.registerWithBsebLink(linkDto, photoPath, signaturePath);
   }
 
-  // MSG91 OTP Integration Endpoints
+  // Twilio OTP Integration Endpoints
 
   /**
-   * Send OTP via MSG91 for login/registration
+   * Send OTP via Twilio Verify for login/registration
    */
   @Post('send-otp')
-  @ApiOperation({ summary: 'Send OTP to mobile/email via MSG91' })
+  @ApiOperation({ summary: 'Send OTP to mobile/email via Twilio' })
   @Throttle({ long: {limit: 5, ttl: 3600000} })  // 5 requests per hour
   async sendOTP(@Body() dto: SendOtpDto) {
     const { identifier, type = 'login' } = dto;
 
     // Check if identifier is mobile or email
     const isMobile = /^\+?[0-9]{10,13}$/.test(identifier);
+    const isEmail = this.twilioService.validateEmail(identifier);
 
     if (isMobile) {
       // Validate mobile number
-      if (!this.msg91Service.validateMobile(identifier)) {
+      if (!this.twilioService.validateMobile(identifier)) {
         throw new BadRequestException('Invalid mobile number');
       }
 
-      // Send OTP via MSG91
-      const success = await this.msg91Service.sendOTP(identifier);
+      // Send OTP via Twilio Verify
+      const result = await this.twilioService.sendOTP(identifier, 'sms');
 
-      if (!success) {
-        throw new InternalServerErrorException('Failed to send OTP');
+      if (!result.success) {
+        throw new InternalServerErrorException(result.message || 'Failed to send OTP');
       }
 
       return {
         success: true,
         message: 'OTP sent to mobile number',
         identifier: identifier.replace(/.(?=.{4})/g, '*'), // Mask mobile
+        channel: 'sms',
+      };
+    } else if (isEmail) {
+      // Send OTP via Twilio Verify to email
+      const result = await this.twilioService.sendOTP(identifier, 'email');
+
+      if (!result.success) {
+        // Fall back to existing email OTP logic if Twilio fails
+        return this.authService.sendOtpLogin(identifier);
+      }
+
+      return {
+        success: true,
+        message: 'OTP sent to email',
+        identifier: identifier.replace(/(.{2})(.*)(@.*)/, '$1***$3'),
+        channel: 'email',
       };
     } else {
-      // Handle email OTP (existing logic)
-      return this.authService.sendOtpLogin(identifier);
+      throw new BadRequestException('Invalid identifier. Please provide a valid phone number or email');
     }
   }
 
   /**
-   * Verify OTP via MSG91 for login
+   * Verify OTP via Twilio Verify for login
    */
   @Post('verify-otp')
-  @ApiOperation({ summary: 'Verify OTP and login via MSG91' })
+  @ApiOperation({ summary: 'Verify OTP and login via Twilio' })
   async verifyOTP(@Body() dto: VerifyOtpDto) {
     const { identifier, otp } = dto;
 
     // Check if identifier is mobile or email
     const isMobile = /^\+?[0-9]{10,13}$/.test(identifier);
+    const isEmail = this.twilioService.validateEmail(identifier);
 
-    if (isMobile) {
-      // Verify OTP via MSG91
-      const isValid = await this.msg91Service.verifyOTP(identifier, otp);
+    if (isMobile || isEmail) {
+      // Verify OTP via Twilio
+      const result = await this.twilioService.verifyOTP(identifier, otp);
 
-      if (!isValid) {
-        throw new UnauthorizedException('Invalid or expired OTP');
+      if (!result.success) {
+        // If email, try existing email OTP verification as fallback
+        if (isEmail) {
+          return this.authService.verifyLoginOtp(identifier, otp);
+        }
+        throw new UnauthorizedException(result.message || 'Invalid or expired OTP');
       }
 
-      // Find or create user with phone
-      // Note: This requires extending the AuthService to handle phone-based auth
-      // For now, we'll return a success message
-      return {
-        success: true,
-        message: 'OTP verified successfully',
-        // TODO: Generate JWT tokens here after user lookup/creation
-      };
+      // Find or create user
+      // For mobile: Create/find user by phone
+      // For email: Use existing auth service
+      if (isMobile) {
+        // TODO: Implement phone-based user lookup/creation
+        // For now, return success with a note to implement user creation
+        return {
+          success: true,
+          message: 'OTP verified successfully',
+          identifier: identifier,
+          // TODO: Generate JWT tokens here after implementing user lookup
+        };
+      } else {
+        // For email, use existing auth service
+        return this.authService.verifyLoginOtp(identifier, otp);
+      }
     } else {
-      // Handle email OTP verification (existing logic)
-      return this.authService.verifyLoginOtp(identifier, otp);
+      throw new BadRequestException('Invalid identifier');
     }
   }
 
   /**
-   * Resend OTP via MSG91
+   * Resend OTP via Twilio
    */
   @Post('resend-otp')
-  @ApiOperation({ summary: 'Resend OTP via MSG91' })
+  @ApiOperation({ summary: 'Resend OTP via Twilio' })
   @ApiResponse({ status: 200, description: 'OTP resent successfully' })
   @ApiResponse({ status: 429, description: 'Too many requests' })
   @Throttle({ long: {limit: 3, ttl: 3600000} })  // 3 resend requests per hour
-  async resendOTP(@Body() dto: { identifier: string }) {
-    const { identifier } = dto;
+  async resendOTP(@Body() dto: { identifier: string; channel?: 'sms' | 'call' | 'whatsapp' | 'email' }) {
+    const { identifier, channel = 'sms' } = dto;
 
     const isMobile = /^\+?[0-9]{10,13}$/.test(identifier);
+    const isEmail = this.twilioService.validateEmail(identifier);
 
     if (isMobile) {
-      const success = await this.msg91Service.resendOTP(identifier);
+      // Cancel any pending verifications first
+      await this.twilioService.cancelVerification(identifier);
 
-      if (!success) {
+      // Resend OTP with specified channel (sms, call, or whatsapp)
+      const result = await this.twilioService.sendOTP(identifier, channel as any);
+
+      if (!result.success) {
         throw new HttpException(
-          'Please wait before requesting another OTP',
+          result.message || 'Failed to resend OTP',
           HttpStatus.TOO_MANY_REQUESTS,
         );
       }
 
       return {
         success: true,
-        message: 'OTP resent successfully',
+        message: `OTP resent via ${channel}`,
+        channel: channel,
+      };
+    } else if (isEmail) {
+      // Resend email OTP
+      const result = await this.twilioService.sendOTP(identifier, 'email');
+
+      if (!result.success) {
+        // Fall back to existing email OTP logic
+        return this.authService.sendOtpLogin(identifier);
+      }
+
+      return {
+        success: true,
+        message: 'OTP resent to email',
+        channel: 'email',
       };
     } else {
-      // Handle email OTP resend - use existing login/otp endpoint
-      return this.authService.sendOtpLogin(identifier);
+      throw new BadRequestException('Invalid identifier');
     }
+  }
+
+  /**
+   * Send OTP via WhatsApp (additional Twilio feature)
+   */
+  @Post('send-otp/whatsapp')
+  @ApiOperation({ summary: 'Send OTP via WhatsApp using Twilio' })
+  @Throttle({ long: {limit: 5, ttl: 3600000} })
+  async sendWhatsAppOTP(@Body() dto: { identifier: string }) {
+    const { identifier } = dto;
+
+    if (!this.twilioService.validateMobile(identifier)) {
+      throw new BadRequestException('Invalid mobile number for WhatsApp');
+    }
+
+    const result = await this.twilioService.sendOTP(identifier, 'whatsapp');
+
+    if (!result.success) {
+      throw new InternalServerErrorException(result.message || 'Failed to send WhatsApp OTP');
+    }
+
+    return {
+      success: true,
+      message: 'OTP sent via WhatsApp',
+      identifier: identifier.replace(/.(?=.{4})/g, '*'),
+      channel: 'whatsapp',
+    };
   }
 }
