@@ -8,11 +8,11 @@ set -e
 
 # Configuration Variables
 INSTANCE_TYPE="t2.micro"  # Smallest instance type (1 vCPU, 1 GB RAM)
-AMI_ID="ami-0e2c8caa4b6378d8c"  # Ubuntu 22.04 LTS in us-east-1 (update based on your region)
+AMI_ID="ami-0e53db6fd757e38c7"  # Ubuntu 22.04 LTS in ap-south-1 (Mumbai)
 KEY_NAME="bseb-connect-key"
 SECURITY_GROUP_NAME="bseb-connect-sg"
 INSTANCE_NAME="BSEB-Connect-Backend"
-REGION="us-east-1"  # Change to your preferred region
+REGION="ap-south-1"  # Mumbai region for better latency in India
 ELASTIC_IP_ALLOCATION=""  # Will be set after allocation
 
 # Colors for output
