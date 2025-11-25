@@ -31,7 +31,7 @@ class Environment {
       case _staging:
         return 'http://65.2.113.83/api/'; // Staging server
       case _prod:
-        return 'http://bseb-backend.mvpl.info/api/'; // Production server
+        return 'https://bseb-backend.mvpl.info/api/'; // Production server
       default:
         return 'http://65.2.113.83/api/';
     }
