@@ -4,25 +4,33 @@ import * as Minio from 'minio';
 @Injectable()
 export class MinioService implements OnModuleInit {
   private minioClient: Minio.Client;
-  private readonly bucketName = process.env.S3_BUCKET_NAME || 'bseb-connect-uploads';
-  private readonly region = process.env.S3_REGION || 'ap-south-1';
+  private readonly useS3 = process.env.USE_S3 === 'true';
+  private readonly bucketName = process.env.AWS_S3_BUCKET || process.env.S3_BUCKET_NAME || 'bseb-connect-uploads';
+  private readonly region = process.env.AWS_REGION || process.env.S3_REGION || 'ap-south-1';
 
   async onModuleInit() {
-    const endpoint = process.env.MINIO_ENDPOINT || 'localhost';
-    const isS3 = endpoint.includes('amazonaws.com');
+    if (this.useS3) {
+      // AWS S3 Configuration
+      this.minioClient = new Minio.Client({
+        endPoint: `s3.${this.region}.amazonaws.com`,
+        port: 443,
+        useSSL: true,
+        accessKey: process.env.AWS_ACCESS_KEY_ID || '',
+        secretKey: process.env.AWS_SECRET_ACCESS_KEY || '',
+        region: this.region,
+      });
+      console.log(`✅ Using AWS S3 bucket: ${this.bucketName}`);
+    } else {
+      // Local MinIO Configuration
+      this.minioClient = new Minio.Client({
+        endPoint: process.env.MINIO_ENDPOINT || 'localhost',
+        port: parseInt(process.env.MINIO_PORT || '9000'),
+        useSSL: process.env.MINIO_USE_SSL === 'true',
+        accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
+        secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
+      });
 
-    // Initialize MinIO/S3 client
-    this.minioClient = new Minio.Client({
-      endPoint: endpoint,
-      port: isS3 ? 443 : parseInt(process.env.MINIO_PORT || '9000'),
-      useSSL: isS3 || process.env.MINIO_USE_SSL === 'true',
-      accessKey: process.env.MINIO_ACCESS_KEY || 'minioadmin',
-      secretKey: process.env.MINIO_SECRET_KEY || 'minioadmin',
-      region: this.region,
-    });
-
-    // Create bucket if it doesn't exist (skip for S3 - bucket should be pre-created)
-    if (!isS3) {
+      // Create bucket if it doesn't exist
       try {
         const exists = await this.minioClient.bucketExists(this.bucketName);
         if (!exists) {
@@ -32,8 +40,6 @@ export class MinioService implements OnModuleInit {
       } catch (error) {
         console.error('MinIO bucket creation error:', error);
       }
-    } else {
-      console.log(`✅ Using AWS S3 bucket: ${this.bucketName}`);
     }
   }
 
