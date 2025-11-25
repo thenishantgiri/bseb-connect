@@ -84,7 +84,7 @@ jobs:
           status: draft
 
       - name: Upload APK as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: android-release-apk
           path: build/app/outputs/flutter-apk/app-release.apk
@@ -186,7 +186,7 @@ jobs:
             --apiIssuer "$APP_STORE_CONNECT_ISSUER_ID"
 
       - name: Upload IPA as artifact
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: ios-release-ipa
           path: build/ios/ipa/*.ipa
