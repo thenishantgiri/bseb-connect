@@ -40,7 +40,7 @@ dependencies:
   get: ^4.6.5   # For state management and easy localization
   google_sign_in: ^7.0.0
   googleapis: ^13.0.0
-  googleapis_auth: ^1.6.0
+  googleapis_auth: ^2.0.0
   file_picker: ^8.0.0
   open_filex: ^4.4.0
 
