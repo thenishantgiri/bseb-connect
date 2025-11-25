@@ -1,0 +1,68 @@
+version: 2
+updates:
+  # Backend Node.js dependencies
+  - package-ecosystem: "npm"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "thenishantgiri"
+    labels:
+      - "dependencies"
+      - "backend"
+    groups:
+      nestjs:
+        patterns:
+          - "@nestjs/*"
+      prisma:
+        patterns:
+          - "prisma"
+          - "@prisma/*"
+      testing:
+        patterns:
+          - "jest*"
+          - "@types/jest"
+          - "supertest"
+
+  # Flutter/Dart dependencies
+  - package-ecosystem: "pub"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    open-pull-requests-limit: 10
+    reviewers:
+      - "thenishantgiri"
+    labels:
+      - "dependencies"
+      - "flutter"
+
+  # GitHub Actions
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    reviewers:
+      - "thenishantgiri"
+    labels:
+      - "dependencies"
+      - "ci/cd"
+
+  # Docker dependencies (if using Docker)
+  - package-ecosystem: "docker"
+    directory: "/backend"
+    schedule:
+      interval: "weekly"
+      day: "monday"
+      time: "03:00"
+    reviewers:
+      - "thenishantgiri"
+    labels:
+      - "dependencies"
+      - "docker"

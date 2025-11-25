@@ -1,0 +1,379 @@
+name: Main CI/CD Pipeline
+
+on:
+  push:
+    branches: [ main, develop, staging ]
+  pull_request:
+    branches: [ main, develop, staging ]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: 'Environment to deploy to'
+        required: true
+        default: 'development'
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+env:
+  NODE_VERSION: '18.x'
+  FLUTTER_VERSION: '3.16.0'
+
+jobs:
+  # ============== Backend CI/CD ==============
+  backend-test:
+    name: Backend Tests
+    runs-on: ubuntu-latest
+
+    services:
+      postgres:
+        image: postgres:14
+        env:
+          POSTGRES_USER: test_user
+          POSTGRES_PASSWORD: test_pass
+          POSTGRES_DB: test_db
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd pg_isready
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+      redis:
+        image: redis:7
+        ports:
+          - 6379:6379
+        options: >-
+          --health-cmd "redis-cli ping"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 5
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Cache pnpm dependencies
+        uses: actions/cache@v3
+        with:
+          path: ~/.pnpm-store
+          key: ${{ runner.os }}-pnpm-${{ hashFiles('backend/pnpm-lock.yaml') }}
+          restore-keys: |
+            ${{ runner.os }}-pnpm-
+
+      - name: Install backend dependencies
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Create test environment file
+        working-directory: backend
+        run: |
+          cat > .env.test <<EOF
+          NODE_ENV=test
+          DATABASE_URL=postgresql://test_user:test_pass@localhost:5432/test_db?schema=public
+          REDIS_HOST=localhost
+          REDIS_PORT=6379
+          JWT_SECRET=test-secret-key
+          JWT_REFRESH_SECRET=test-refresh-secret
+          EOF
+
+      - name: Run Prisma migrations
+        if: hashFiles('backend/prisma/schema.prisma') != ''
+        working-directory: backend
+        run: |
+          npx prisma generate
+          npx prisma migrate deploy
+
+      - name: Run linter
+        working-directory: backend
+        run: pnpm run lint
+        continue-on-error: true
+
+      - name: Run tests
+        working-directory: backend
+        run: pnpm run test
+        continue-on-error: true
+
+      - name: Run E2E tests
+        working-directory: backend
+        run: pnpm run test:e2e
+        continue-on-error: true
+
+      - name: Upload coverage
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-coverage
+          path: backend/coverage/
+
+  backend-build:
+    name: Build Backend
+    runs-on: ubuntu-latest
+    needs: backend-test
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: ${{ env.NODE_VERSION }}
+
+      - name: Install pnpm
+        run: npm install -g pnpm
+
+      - name: Install dependencies
+        working-directory: backend
+        run: pnpm install --frozen-lockfile
+
+      - name: Build application
+        working-directory: backend
+        run: pnpm run build
+
+      - name: Upload build artifacts
+        uses: actions/upload-artifact@v3
+        with:
+          name: backend-build
+          path: |
+            backend/dist/
+            backend/package.json
+            backend/pnpm-lock.yaml
+            backend/ecosystem.config.js
+            backend/prisma/
+
+  # ============== Flutter CI/CD ==============
+  flutter-test:
+    name: Flutter Tests
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Run analyzer
+        run: flutter analyze
+        continue-on-error: true
+
+      - name: Run tests
+        run: flutter test
+        continue-on-error: true
+
+      - name: Check formatting
+        run: dart format --set-exit-if-changed .
+        continue-on-error: true
+
+  flutter-build:
+    name: Build Flutter App
+    runs-on: ubuntu-latest
+    needs: flutter-test
+    strategy:
+      matrix:
+        platform: [android, ios, web]
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Flutter
+        uses: subosito/flutter-action@v2
+        with:
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          channel: 'stable'
+
+      - name: Install dependencies
+        run: flutter pub get
+
+      - name: Build Android APK
+        if: matrix.platform == 'android'
+        run: |
+          flutter build apk --release
+          flutter build appbundle --release
+
+      - name: Build iOS
+        if: matrix.platform == 'ios' && runner.os == 'macOS'
+        run: flutter build ios --release --no-codesign
+
+      - name: Build Web
+        if: matrix.platform == 'web'
+        run: flutter build web --release
+
+      - name: Upload build artifacts
+        if: matrix.platform == 'android'
+        uses: actions/upload-artifact@v3
+        with:
+          name: flutter-${{ matrix.platform }}-build
+          path: |
+            build/app/outputs/flutter-apk/app-release.apk
+            build/app/outputs/bundle/release/app-release.aab
+
+      - name: Upload web artifacts
+        if: matrix.platform == 'web'
+        uses: actions/upload-artifact@v3
+        with:
+          name: flutter-web-build
+          path: build/web/
+
+  # ============== Deploy to AWS ==============
+  deploy-backend:
+    name: Deploy Backend to AWS
+    runs-on: ubuntu-latest
+    needs: [backend-build, flutter-build]
+    if: github.event_name == 'push' || github.event_name == 'workflow_dispatch'
+
+    environment:
+      name: ${{ github.event.inputs.environment || (github.ref == 'refs/heads/main' && 'production' || github.ref == 'refs/heads/staging' && 'staging' || 'development') }}
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download backend build
+        uses: actions/download-artifact@v3
+        with:
+          name: backend-build
+          path: backend-deploy/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to EC2
+        env:
+          EC2_HOST: ${{ secrets.EC2_HOST }}
+          EC2_USER: ${{ secrets.EC2_USER }}
+          EC2_KEY: ${{ secrets.EC2_SSH_KEY }}
+        run: |
+          # Create SSH key file
+          echo "$EC2_KEY" > deploy_key
+          chmod 600 deploy_key
+
+          # Create deployment script
+          cat > deploy.sh <<'EOF'
+          #!/bin/bash
+          set -e
+
+          # Stop current application
+          pm2 stop bseb-backend || true
+
+          # Backup current version
+          if [ -d "/var/www/bseb-backend" ]; then
+            sudo mv /var/www/bseb-backend /var/www/bseb-backend-backup-$(date +%Y%m%d-%H%M%S)
+          fi
+
+          # Create new directory
+          sudo mkdir -p /var/www/bseb-backend
+          sudo chown $USER:$USER /var/www/bseb-backend
+
+          # Extract new version
+          cd /var/www/bseb-backend
+          tar -xzf /tmp/backend-deploy.tar.gz
+
+          # Install production dependencies
+          pnpm install --production
+
+          # Run database migrations
+          if [ -f "prisma/schema.prisma" ]; then
+            npx prisma generate
+            npx prisma migrate deploy
+          fi
+
+          # Start application
+          pm2 start ecosystem.config.js --env production
+          pm2 save
+
+          # Cleanup
+          rm /tmp/backend-deploy.tar.gz
+
+          echo "Deployment completed successfully!"
+          EOF
+
+          # Create tar archive of backend
+          cd backend-deploy
+          tar -czf ../backend-deploy.tar.gz .
+          cd ..
+
+          # Upload to EC2
+          scp -o StrictHostKeyChecking=no -i deploy_key backend-deploy.tar.gz $EC2_USER@$EC2_HOST:/tmp/
+
+          # Execute deployment script
+          scp -o StrictHostKeyChecking=no -i deploy_key deploy.sh $EC2_USER@$EC2_HOST:/tmp/
+          ssh -o StrictHostKeyChecking=no -i deploy_key $EC2_USER@$EC2_HOST 'bash /tmp/deploy.sh'
+
+          # Cleanup
+          rm deploy_key deploy.sh backend-deploy.tar.gz
+
+      - name: Health check
+        run: |
+          sleep 30
+          curl -f http://${{ secrets.EC2_HOST }}/health || exit 1
+          echo "Health check passed!"
+
+      - name: Send deployment notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Backend deployment to ${{ github.event.inputs.environment || 'production' }} ${{ job.status }}
+            Commit: ${{ github.sha }}
+            Author: ${{ github.actor }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        continue-on-error: true
+
+  # ============== Deploy Flutter Web ==============
+  deploy-flutter-web:
+    name: Deploy Flutter Web
+    runs-on: ubuntu-latest
+    needs: flutter-build
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Download web build
+        uses: actions/download-artifact@v3
+        with:
+          name: flutter-web-build
+          path: web-deploy/
+
+      - name: Configure AWS credentials
+        uses: aws-actions/configure-aws-credentials@v4
+        with:
+          aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+          aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+          aws-region: ${{ secrets.AWS_REGION }}
+
+      - name: Deploy to S3
+        run: |
+          aws s3 sync web-deploy/ s3://${{ secrets.S3_BUCKET_NAME }}/ --delete
+          aws cloudfront create-invalidation --distribution-id ${{ secrets.CLOUDFRONT_DISTRIBUTION_ID }} --paths "/*"
+
+      - name: Send deployment notification
+        if: always()
+        uses: 8398a7/action-slack@v3
+        with:
+          status: ${{ job.status }}
+          text: |
+            Flutter Web deployment ${{ job.status }}
+            URL: https://${{ secrets.WEB_DOMAIN }}
+          webhook_url: ${{ secrets.SLACK_WEBHOOK }}
+        continue-on-error: true

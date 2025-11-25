@@ -1,0 +1,29 @@
+{
+  "project_info": {
+    "project_number": "588009626636",
+    "project_id": "bseb-connect",
+    "storage_bucket": "bseb-connect.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:588009626636:android:77e31870c4d88140546229",
+        "android_client_info": {
+          "package_name": "com.bseb_connect.bseb"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyCL7lrPRHmif_o5ft7StMU51AS8ZsU31Fs"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

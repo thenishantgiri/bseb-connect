@@ -1,0 +1,137 @@
+# Configuration for GitHub labeler action
+# Automatically adds labels to PRs based on file changes
+
+# Frontend labels
+flutter:
+  - lib/**/*
+  - test/**/*
+  - pubspec.yaml
+  - pubspec.lock
+
+android:
+  - android/**/*
+
+ios:
+  - ios/**/*
+
+web:
+  - web/**/*
+
+# Backend labels
+backend:
+  - backend/**/*
+
+database:
+  - backend/prisma/**/*
+  - backend/**/*.sql
+
+api:
+  - backend/src/controllers/**/*
+  - backend/src/routes/**/*
+  - backend/src/**/*.controller.ts
+  - backend/src/**/*.service.ts
+
+# Infrastructure labels
+deployment:
+  - backend/deployment/**/*
+  - .github/workflows/**/*
+  - Dockerfile
+  - docker-compose.yml
+  - .dockerignore
+
+ci/cd:
+  - .github/**/*
+
+aws:
+  - backend/deployment/**/*.sh
+  - backend/deployment/**/*.yml
+  - backend/deployment/ec2-*
+
+# Configuration labels
+config:
+  - '**/*.config.js'
+  - '**/*.config.ts'
+  - .env.*
+  - .gitignore
+  - .eslintrc*
+  - .prettierrc*
+
+# Documentation labels
+documentation:
+  - '**/*.md'
+  - docs/**/*
+  - README.md
+  - CONTRIBUTING.md
+  - LICENSE
+
+# Testing labels
+tests:
+  - test/**/*
+  - backend/test/**/*
+  - backend/src/**/*.spec.ts
+  - backend/src/**/*.e2e-spec.ts
+
+# Security labels
+security:
+  - backend/src/auth/**/*
+  - backend/src/guards/**/*
+  - backend/src/middlewares/**/*
+  - lib/services/auth_*
+  - lib/utilities/validators.dart
+
+# UI/UX labels
+ui:
+  - lib/widgets/**/*
+  - lib/screens/**/*
+  - lib/view_controllers/**/*
+  - assets/**/*
+
+state-management:
+  - lib/controllers/**/*
+  - lib/providers/**/*
+  - lib/state/**/*
+
+# Dependency labels
+dependencies:
+  - package.json
+  - package-lock.json
+  - pnpm-lock.yaml
+  - yarn.lock
+  - pubspec.yaml
+  - pubspec.lock
+  - backend/package.json
+  - backend/pnpm-lock.yaml
+
+# Build/Compile labels
+build:
+  - tsconfig.json
+  - nest-cli.json
+  - webpack.config.js
+  - vite.config.js
+
+# Mobile specific
+biometrics:
+  - lib/**/biometric*
+  - lib/**/fingerprint*
+  - lib/**/face*
+
+offline:
+  - lib/**/offline*
+  - lib/**/cache*
+  - lib/**/sync*
+
+# Feature specific
+authentication:
+  - lib/**/auth*
+  - lib/**/login*
+  - lib/**/register*
+  - backend/src/auth/**/*
+
+profile:
+  - lib/**/profile*
+  - backend/src/profile/**/*
+
+notifications:
+  - lib/**/notification*
+  - lib/**/push*
+  - backend/src/notifications/**/*

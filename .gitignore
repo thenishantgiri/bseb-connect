@@ -1,0 +1,154 @@
+# ============== Flutter/Dart ==============
+.dart_tool/
+.flutter-plugins
+.flutter-plugins-dependencies
+.packages
+.pub-cache/
+.pub/
+build/
+*.iml
+*.ipr
+*.iws
+.idea/
+.vscode/
+*.swp
+*.swo
+.DS_Store
+**/doc/api/
+
+# Symbolication related
+app.*.symbols
+
+# Obfuscation related
+app.*.map.json
+
+# ============== Android ==============
+android/.gradle/
+android/captures/
+android/.idea/
+android/local.properties
+android/**/GeneratedPluginRegistrant.java
+android/key.properties
+*.jks
+*.keystore
+/android/app/debug
+/android/app/profile
+/android/app/release
+
+# ============== iOS ==============
+ios/.generated/
+ios/Flutter/.last_build_id
+ios/Flutter/App.framework
+ios/Flutter/Flutter.framework
+ios/Flutter/Flutter.podspec
+ios/Flutter/Generated.xcconfig
+ios/Flutter/ephemeral
+ios/Flutter/app.flx
+ios/Flutter/app.zip
+ios/Flutter/flutter_assets/
+ios/Flutter/flutter_export_environment.sh
+ios/ServiceDefinitions.json
+ios/Runner/GeneratedPluginRegistrant.*
+ios/Pods/
+ios/.symlinks/
+ios/Podfile.lock
+
+# ============== Backend Node.js ==============
+backend/node_modules/
+backend/dist/
+backend/build/
+backend/*.log
+backend/logs/
+backend/.env
+backend/.env.*
+!backend/.env.example
+!backend/deployment/.env.production
+backend/coverage/
+backend/.nyc_output/
+backend/*.pid
+backend/*.seed
+backend/*.pid.lock
+backend/lib-cov/
+backend/pids/
+backend/npm-debug.log*
+backend/yarn-debug.log*
+backend/yarn-error.log*
+backend/pnpm-debug.log*
+backend/lerna-debug.log*
+
+# ============== Database ==============
+*.db
+*.sqlite
+*.sqlite3
+backend/prisma/dev.db
+backend/prisma/migrations/dev/
+
+# ============== Uploads/Generated ==============
+backend/uploads/
+backend/static/
+backend/public/uploads/
+backend/temp/
+backend/tmp/
+
+# ============== Testing ==============
+backend/test-results/
+backend/playwright-report/
+backend/playwright/.cache/
+coverage/
+*.lcov
+.nyc_output/
+
+# ============== AWS/Deployment ==============
+*.pem
+*.key
+*.crt
+*.p12
+deployment-info.txt
+backend/deployment/bseb-connect-key.pem
+backend/deployment/deployment-info.txt
+.aws/
+
+# ============== CI/CD ==============
+.github/secrets/
+deploy_key
+deploy_key.pub
+
+# ============== OS Files ==============
+.DS_Store
+Thumbs.db
+desktop.ini
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+*~
+
+# ============== Logs ==============
+logs/
+*.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+pnpm-debug.log*
+lerna-debug.log*
+
+# ============== Temporary ==============
+tmp/
+temp/
+*.tmp
+*.temp
+*.bak
+*.backup
+*.old
+*.orig
+.cache/
+.parcel-cache/
+migrate_working_dir/
+
+# ============== Miscellaneous ==============
+*.class
+*.pyc
+.atom/
+.buildlog/
+.history
+.svn/
+.swiftpm/
