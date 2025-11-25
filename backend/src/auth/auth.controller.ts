@@ -1,7 +1,6 @@
 import { Controller, Post, Body, UseInterceptors, UploadedFiles, BadRequestException, InternalServerErrorException, UnauthorizedException, HttpException, HttpStatus } from '@nestjs/common';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { Throttle } from '@nestjs/throttler';
-import { ApiOperation, ApiResponse } from '@nestjs/swagger';
 import { AuthService } from './auth.service';
 import { MinioService } from '../minio/minio.service';
 import { FileValidationService } from '../common/file-validation.service';
@@ -119,10 +118,9 @@ export class AuthController {
    * Send OTP via Twilio Verify for login/registration
    */
   @Post('send-otp')
-  @ApiOperation({ summary: 'Send OTP to mobile/email via Twilio' })
   @Throttle({ long: {limit: 5, ttl: 3600000} })  // 5 requests per hour
   async sendOTP(@Body() dto: SendOtpDto) {
-    const { identifier, type = 'login' } = dto;
+    const { identifier } = dto;
 
     // Check if identifier is mobile or email
     const isMobile = /^\+?[0-9]{10,13}$/.test(identifier);
@@ -171,7 +169,6 @@ export class AuthController {
    * Verify OTP via Twilio Verify for login
    */
   @Post('verify-otp')
-  @ApiOperation({ summary: 'Verify OTP and login via Twilio' })
   async verifyOTP(@Body() dto: VerifyOtpDto) {
     const { identifier, otp } = dto;
 
@@ -216,9 +213,6 @@ export class AuthController {
    * Resend OTP via Twilio
    */
   @Post('resend-otp')
-  @ApiOperation({ summary: 'Resend OTP via Twilio' })
-  @ApiResponse({ status: 200, description: 'OTP resent successfully' })
-  @ApiResponse({ status: 429, description: 'Too many requests' })
   @Throttle({ long: {limit: 3, ttl: 3600000} })  // 3 resend requests per hour
   async resendOTP(@Body() dto: { identifier: string; channel?: 'sms' | 'call' | 'whatsapp' | 'email' }) {
     const { identifier, channel = 'sms' } = dto;
@@ -268,7 +262,6 @@ export class AuthController {
    * Send OTP via WhatsApp (additional Twilio feature)
    */
   @Post('send-otp/whatsapp')
-  @ApiOperation({ summary: 'Send OTP via WhatsApp using Twilio' })
   @Throttle({ long: {limit: 5, ttl: 3600000} })
   async sendWhatsAppOTP(@Body() dto: { identifier: string }) {
     const { identifier } = dto;
