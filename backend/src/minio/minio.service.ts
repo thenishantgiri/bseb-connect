@@ -63,7 +63,11 @@ export class MinioService implements OnModuleInit {
   }
 
   async getFileUrl(fileName: string): Promise<string> {
-    // Generate presigned URL (valid for 7 days)
+    if (this.useS3) {
+      // Return direct public S3 URL
+      return `https://${this.bucketName}.s3.${this.region}.amazonaws.com/${fileName}`;
+    }
+    // Generate presigned URL for MinIO (valid for 7 days)
     return await this.minioClient.presignedGetObject(
       this.bucketName,
       fileName,
