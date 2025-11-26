@@ -37,7 +37,7 @@ dependencies:
   geolocator: ^14.0.2
   cupertino_icons: ^1.0.8
   syncfusion_flutter_pdfviewer: ^31.2.12
-  get: ^4.6.5   # For state management and easy localization
+  get: ^4.7.3   # For state management and easy localization
   google_sign_in: ^7.0.0
   googleapis: ^15.0.0
   googleapis_auth: ^2.0.0
