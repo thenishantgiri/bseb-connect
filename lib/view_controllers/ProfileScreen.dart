@@ -5,6 +5,7 @@ import 'package:intl/intl.dart';
 import '../utilities/Constant.dart';
 import '../utilities/CustomColors.dart';
 import '../utilities/SharedPreferencesHelper.dart';
+import '../widgets/cached_image.dart';
 import 'EditProfileScreen.dart';
 
 class ProfileScreen extends StatefulWidget {
@@ -49,42 +50,44 @@ class _ProfileScreenState extends State<ProfileScreen> {
   }
 
   Future<void> _loadProfileDetails() async {
-    userName = await sharedPreferencesHelper.getPref("FullName");
-    email = await sharedPreferencesHelper.getPref("Email");
-    userClass = await sharedPreferencesHelper.getPref("Class");
-    phone = await sharedPreferencesHelper.getPref("Phone");
-    rollCode = await sharedPreferencesHelper.getPref("RollCode");
-    rollNumber = await sharedPreferencesHelper.getPref("RollNumber");
-    imageUrl = await sharedPreferencesHelper.getPref("Photo");
-    imageUrl = imageUrl!
-        .trim()
-        .replaceAll(' ', '')
-        .replaceAll('studentprofile', 'signature');
+    userName = await sharedPreferencesHelper.getPref("fullName");
+    email = await sharedPreferencesHelper.getPref("email");
+    userClass = await sharedPreferencesHelper.getPref("class");
+    phone = await sharedPreferencesHelper.getPref("phone");
+    rollCode = await sharedPreferencesHelper.getPref("rollCode");
+    rollNumber = await sharedPreferencesHelper.getPref("rollNumber");
+    imageUrl = await sharedPreferencesHelper.getPref("photoUrl");
 
-    signatureUrl = await sharedPreferencesHelper.getPref("SignaturePhoto");
-    fatherName = await sharedPreferencesHelper.getPref("FatherName");
-    motherName = await sharedPreferencesHelper.getPref("MotherName");
-    dob = await sharedPreferencesHelper.getPref("Dob");
-    gender = await sharedPreferencesHelper.getPref("Gender");
-    caste = await sharedPreferencesHelper.getPref("Caste");
-    religion = await sharedPreferencesHelper.getPref("Religion");
-    maritalStatus = await sharedPreferencesHelper.getPref("MaritalStatus");
-    differentlyAbled = await sharedPreferencesHelper.getPref("DifferentlyAbled");
-    stream = await sharedPreferencesHelper.getPref("Stream");
-    registrationNumber = await sharedPreferencesHelper.getPref("RegistrationNumber");
-    schoolName = await sharedPreferencesHelper.getPref("SchoolName");
-    udiseCode = await sharedPreferencesHelper.getPref("UdiseCode");
-    address = await sharedPreferencesHelper.getPref("FullAddress");
-    state = await sharedPreferencesHelper.getPref("State");
-    district = await sharedPreferencesHelper.getPref("Distic");
-    block = await sharedPreferencesHelper.getPref("Block");
-    aadhar = await sharedPreferencesHelper.getPref("AddharNumber");
+    // Only process imageUrl if it's not null
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      imageUrl = imageUrl!
+          .trim()
+          .replaceAll(' ', '')
+          .replaceAll('studentprofile', 'signature');
+    }
+
+    signatureUrl = await sharedPreferencesHelper.getPref("signatureUrl");
+    fatherName = await sharedPreferencesHelper.getPref("fatherName");
+    motherName = await sharedPreferencesHelper.getPref("motherName");
+    dob = await sharedPreferencesHelper.getPref("dob");
+    gender = await sharedPreferencesHelper.getPref("gender");
+    caste = await sharedPreferencesHelper.getPref("caste");
+    religion = await sharedPreferencesHelper.getPref("religion");
+    maritalStatus = await sharedPreferencesHelper.getPref("maritalStatus");
+    differentlyAbled = await sharedPreferencesHelper.getPref("differentlyAbled");
+    stream = await sharedPreferencesHelper.getPref("stream");
+    registrationNumber = await sharedPreferencesHelper.getPref("registrationNumber");
+    schoolName = await sharedPreferencesHelper.getPref("schoolName");
+    udiseCode = await sharedPreferencesHelper.getPref("udiseCode");
+    address = await sharedPreferencesHelper.getPref("address");
+    state = await sharedPreferencesHelper.getPref("state");
+    district = await sharedPreferencesHelper.getPref("district");
+    block = await sharedPreferencesHelper.getPref("block");
+    aadhar = await sharedPreferencesHelper.getPref("aadhaarNumber");
 
     setState(() {});
 
-
-    print("dfdsfdsfs"+signatureUrl.toString());
-    print("dfdsfdssdsdfs"+imageUrl.toString());
+    debugPrint("Profile loaded - Name: $userName, Class: $userClass");
   }
 
   @override
@@ -122,13 +125,9 @@ class _ProfileScreenState extends State<ProfileScreen> {
                       children: [
                         Padding(
                           padding: const EdgeInsets.only(left: 10.0),
-                          child: CircleAvatar(
+                          child: CachedProfileImage(
+                            imageUrl: imageUrl,
                             radius: 45,
-                            backgroundImage:
-                            imageUrl != null
-                               ? NetworkImage(imageUrl!)
-                               :
-                              const AssetImage('assets/images/john.jpg') as ImageProvider,
                           ),
                         ),
                         const SizedBox(width: 16),

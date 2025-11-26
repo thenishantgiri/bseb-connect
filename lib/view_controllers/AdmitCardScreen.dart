@@ -64,7 +64,7 @@ class _AdmitCardScreenState extends State<AdmitCardScreen> {
 
     try {
       Utils.progressbar(context, CustomColors.theme_orange);
-      const String apiUrl = Constant.BASE_URL + Constant.ADMIT_CARD_NEW;
+      final String apiUrl = Constant.BASE_URL + Constant.ADMIT_CARD_NEW;
 
       final response = await _dio.post(
         apiUrl,

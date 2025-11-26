@@ -15,6 +15,7 @@ import 'package:bseb/view_controllers/UpdateClassScreen.dart';
 import 'package:bseb/view_controllers/VideoLectureScreen.dart';
 import 'package:bseb/view_controllers/examEssentialsScreen.dart';
 import 'package:bseb/view_controllers/form/FormScreen.dart';
+import 'package:bseb/widgets/cached_image.dart';
 import 'package:dio/dio.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
@@ -112,23 +113,26 @@ class _HomescreenState extends State<Homescreen> {
   }
 
   Future<void> _loadImageUrl() async {
-    final String? url =
-        await sharedPreferencesHelper.getPref("Photo");
+    final String? url = await sharedPreferencesHelper.getPref("Photo");
     setState(() {
-      imageUrl = url!
-          .trim()
-          .replaceAll(' ', '')
-          .replaceAll('studentprofile', 'signature');
-
+      // Only process if url is not null
+      if (url != null && url.isNotEmpty) {
+        imageUrl = url
+            .trim()
+            .replaceAll(' ', '')
+            .replaceAll('studentprofile', 'signature');
+      } else {
+        imageUrl = null;
+      }
     });
 
-    print('Image URL loaded: $imageUrl');
+    debugPrint('Image URL loaded: $imageUrl');
   }
 
   Future<void> _getNotificationCount() async {
     try {
       // Utils.progressbar(context, CustomColors.theme_orange);
-      const String apiUrl = Constant.BASE_URL + Constant.GET_NOTIFICATION_COUNT;
+      final String apiUrl = Constant.BASE_URL + Constant.GET_NOTIFICATION_COUNT;
 
       final response = await _dio.post(
         apiUrl,
@@ -257,12 +261,9 @@ class _HomescreenState extends State<Homescreen> {
               child: Column(
                 crossAxisAlignment: CrossAxisAlignment.start,
                 children: [
-                  CircleAvatar(
+                  CachedProfileImage(
+                    imageUrl: imageUrl,
                     radius: 40,
-                    backgroundImage: imageUrl != null
-                        ? NetworkImage(imageUrl!)
-                        : const AssetImage('assets/images/john.jpg')
-                            as ImageProvider,
                   ),
                   const SizedBox(height: 12),
                   Text(
@@ -384,12 +385,9 @@ class _HomescreenState extends State<Homescreen> {
             padding: const EdgeInsets.symmetric(vertical: 10),
             child: Column(
               children: [
-                CircleAvatar(
+                CachedProfileImage(
+                  imageUrl: imageUrl,
                   radius: 40,
-                  backgroundImage: imageUrl != null
-                      ? NetworkImage(imageUrl!)
-                      : const AssetImage('assets/images/john.jpg')
-                          as ImageProvider,
                 ),
                 const SizedBox(height: 12),
                  Text(

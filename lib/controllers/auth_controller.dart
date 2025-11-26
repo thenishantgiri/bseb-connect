@@ -72,18 +72,36 @@ class AuthController extends GetxController {
   // REMOVED: Legacy registration check methods
   // Use the new NestJS registration flow: sendOtpLogin() → verifyOtp() → registerStudent()
 
-  /// Verify OTP for registration (legacy method for backward compatibility)
-  Future<bool> verifyRegistrationOtp(String phone, String otp) async {
+  /// Send OTP for registration verification (email or phone)
+  Future<bool> sendRegistrationOtp(String identifier) async {
     _isLoading.value = true;
     _error.value = '';
 
-    // For now, just validate the OTP format (backend will handle actual validation)
+    final response = await _api.sendRegistrationOtp(identifier);
+
     _isLoading.value = false;
 
-    if (otp.length == 6) {
+    if (response.isSuccess) {
       return true;
     } else {
-      _error.value = 'Invalid OTP';
+      _error.value = response.message;
+      return false;
+    }
+  }
+
+  /// Verify OTP for registration
+  Future<bool> verifyRegistrationOtp(String identifier, String otp) async {
+    _isLoading.value = true;
+    _error.value = '';
+
+    final response = await _api.verifyRegistrationOtp(identifier, otp);
+
+    _isLoading.value = false;
+
+    if (response.isSuccess) {
+      return true;
+    } else {
+      _error.value = response.message;
       return false;
     }
   }
@@ -390,5 +408,29 @@ class AuthController extends GetxController {
   /// Clear error
   void clearError() {
     _error.value = '';
+  }
+
+  /// Upload profile image (photo or signature)
+  Future<bool> uploadProfileImage({
+    required String filePath,
+    required String type, // 'photo' or 'signature'
+  }) async {
+    _isLoading.value = true;
+    _error.value = '';
+
+    final response = await _api.uploadProfileImage(
+      filePath: filePath,
+      type: type,
+    );
+
+    _isLoading.value = false;
+
+    if (response.isSuccess && response.data != null) {
+      await _saveUserData(response.data!);
+      return true;
+    } else {
+      _error.value = response.message;
+      return false;
+    }
   }
 }

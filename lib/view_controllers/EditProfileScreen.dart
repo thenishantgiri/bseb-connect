@@ -515,40 +515,43 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     }
 
     // Load from SharedPreferences (either fresh from API or cached)
-    userName = await sharedPreferencesHelper.getPref("FullName");
-    email = await sharedPreferencesHelper.getPref("Email");
-    userClass = await sharedPreferencesHelper.getPref("Class");
-    phone = await sharedPreferencesHelper.getPref("Phone");
-    rollCode = await sharedPreferencesHelper.getPref("RollCode");
-    rollNumber = await sharedPreferencesHelper.getPref("RollNumber");
-    // imageUrl = await sharedPreferencesHelper.getPref("Photo");
+    // Using camelCase keys to match NestJS API response
+    userName = await sharedPreferencesHelper.getPref("fullName");
+    email = await sharedPreferencesHelper.getPref("email");
+    userClass = await sharedPreferencesHelper.getPref("class");
+    phone = await sharedPreferencesHelper.getPref("phone");
+    rollCode = await sharedPreferencesHelper.getPref("rollCode");
+    rollNumber = await sharedPreferencesHelper.getPref("rollNumber");
 
-    imageUrl = await sharedPreferencesHelper.getPref("Photo");
-    imageUrl = imageUrl!
-        .trim()
-        .replaceAll(' ', '')
-        .replaceAll('studentprofile', 'signature');
+    imageUrl = await sharedPreferencesHelper.getPref("photoUrl");
+    // Only process if imageUrl is not null
+    if (imageUrl != null && imageUrl!.isNotEmpty) {
+      imageUrl = imageUrl!
+          .trim()
+          .replaceAll(' ', '')
+          .replaceAll('studentprofile', 'signature');
+    }
 
-    signatureUrl = await sharedPreferencesHelper.getPref("SignaturePhoto");
-    fatherName = await sharedPreferencesHelper.getPref("FatherName");
-    motherName = await sharedPreferencesHelper.getPref("MotherName");
-    dob = await sharedPreferencesHelper.getPref("Dob");
-    gender = await sharedPreferencesHelper.getPref("Gender");
-    caste = await sharedPreferencesHelper.getPref("Caste");
-    religion = await sharedPreferencesHelper.getPref("Religion");
-    maritalStatus = await sharedPreferencesHelper.getPref("MaritalStatus");
-    differentlyAbled = await sharedPreferencesHelper.getPref("DifferentlyAbled");
-    stream = await sharedPreferencesHelper.getPref("Stream");
-    registrationNumber = await sharedPreferencesHelper.getPref("RegistrationNumber");
-    schoolName = await sharedPreferencesHelper.getPref("SchoolName");
-    udiseCode = await sharedPreferencesHelper.getPref("UdiseCode");
-    address = await sharedPreferencesHelper.getPref("FullAddress");
-    division = await sharedPreferencesHelper.getPref("State");
-    district = await sharedPreferencesHelper.getPref("Distic");
-    block = await sharedPreferencesHelper.getPref("Block");
-    aadhar = await sharedPreferencesHelper.getPref("AddharNumber");
-    password = await sharedPreferencesHelper.getPref("Password");
-    area = await sharedPreferencesHelper.getPref("Area");
+    signatureUrl = await sharedPreferencesHelper.getPref("signatureUrl");
+    fatherName = await sharedPreferencesHelper.getPref("fatherName");
+    motherName = await sharedPreferencesHelper.getPref("motherName");
+    dob = await sharedPreferencesHelper.getPref("dob");
+    gender = await sharedPreferencesHelper.getPref("gender");
+    caste = await sharedPreferencesHelper.getPref("caste");
+    religion = await sharedPreferencesHelper.getPref("religion");
+    maritalStatus = await sharedPreferencesHelper.getPref("maritalStatus");
+    differentlyAbled = await sharedPreferencesHelper.getPref("differentlyAbled");
+    stream = await sharedPreferencesHelper.getPref("stream");
+    registrationNumber = await sharedPreferencesHelper.getPref("registrationNumber");
+    schoolName = await sharedPreferencesHelper.getPref("schoolName");
+    udiseCode = await sharedPreferencesHelper.getPref("udiseCode");
+    address = await sharedPreferencesHelper.getPref("address");
+    division = await sharedPreferencesHelper.getPref("state");
+    district = await sharedPreferencesHelper.getPref("district");
+    block = await sharedPreferencesHelper.getPref("block");
+    aadhar = await sharedPreferencesHelper.getPref("aadhaarNumber");
+    password = await sharedPreferencesHelper.getPref("password");
+    area = await sharedPreferencesHelper.getPref("area");
 
 
     // ✅ Assign values to controllers only if not null/empty
@@ -1103,7 +1106,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           const SizedBox(height: 16),
 
                           _buildPasswordField(
-                              _label("password".tr, required: true),
+                              _label("password".tr, required: false),
                               _isPasswordHidden,
                                   () {
                                 setState(() =>
@@ -1111,15 +1114,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               },
                               _passwordController,
                               validator: (v) {
-                                if (v == null || v.isEmpty)
-                                  return "Password required";
-                                if (v.length < 8) return "Min 8 chars required";
+                                // Password is optional during profile edit
+                                if (v != null && v.isNotEmpty && v.length < 8)
+                                  return "Min 8 chars required";
                                 return null;
                               }),
                           const SizedBox(height: 16),
 
                           _buildPasswordField(
-                              _label("confirm_password".tr, required: true),
+                              _label("confirm_password".tr, required: false),
                               _isConfirmPasswordHidden,
                                   () {
                                 setState(() => _isConfirmPasswordHidden =
@@ -1127,10 +1130,13 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               },
                               _confirmPasswordController,
                               validator: (v) {
-                                if (v == null || v.isEmpty)
-                                  return "Confirm Password required";
-                                if (v != _passwordController.text)
-                                  return "Passwords do not match";
+                                // Only validate if password is being changed
+                                if (_passwordController.text.isNotEmpty) {
+                                  if (v == null || v.isEmpty)
+                                    return "Confirm Password required";
+                                  if (v != _passwordController.text)
+                                    return "Passwords do not match";
+                                }
                                 return null;
                               }),
                           const SizedBox(height: 20),
@@ -1271,96 +1277,106 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   // ---------- VALIDATION & SUBMIT ----------
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      //   return;
-      // }
-      //
-      // if (_selectedSignature == null) {
-      //   _showError("upload_signature_photo".tr); // or "Please upload signature"
-      //   return;
-      // }
-
       try {
         Utils.progressbar(context, CustomColors.themeColorBlack);
-        final response = await _dio.post(
-          Constant.LEGACY_BASE_URL + Constant.SEND_OTP,
-          options: Options(
-            headers: {
-              "Content-Type": "application/json",
-            },
-          ),
-          data: {
-            "Phone": _numberController.text.trim().toString(),
-            // Replace with dynamic phone if needed
-          },
-        );
-        Navigator.pop(context);
-        if (response.statusCode == 200) {
-          // SECURITY FIX: OTP should NOT be sent from backend to frontend
-          // OTP should only be sent via SMS to user's phone
-          // Removed: _otp = response.data['data']['OTP'];
-          Navigator.push(
-            context,
-            MaterialPageRoute(
-                builder: (context) => OtpScreen(
-                  name: _nameController.text.trim().toString(),
-                  email: _emailController.text.trim().toString(),
-                  number: _numberController.text.trim().toString(),
-                  confirmPassword: _confirmPasswordController.text.trim().toString(),
-                  rollCode: _rollCodeController.text.trim().toString(),
-                  rollNo: _rollNoController.text.trim().toString(),
-                  registration:
-                  _registrationController.text.trim().toString(),
-                  dob: _dobController.text.trim().toString(),
-                  otp: '', // Empty string - OTP should come via SMS
-                  fatherName: _fatherNameController.text.trim().toString(),
-                  motherName: _motherNameController.text.trim().toString(),
-                  address: _addressController.text.trim().toString(),
-                  aadhaar: _aadhaarController.text.trim().toString(),
-                  udise: _udiseController.text.trim().toString(),
-                  stream: _streamController.text.trim().toString(),
-                  selectedClass: selectedClass.toString(),
-                  selectedGender: selectedGender,
-                  selectedDivisions: selectedDivisions,
-                  selectedDistrict: selectedDistrict,
-                  selectedBlock: selectedBlock,
-                  selectedSchool: selectedSchool,
-                  filePath: _selectedPhoto?.path.toString(),
-                  fileName: fileNamePhoto,
-                  selectedCaste: selectedCaste,
-                  selectedDifferentlyAbled: selectedDifferentlyAbled,
-                  selectedReligion: selectedReligion,
-                  selectedArea: selectedArea,
-                  selectedMaritalStatus: selectedMaritalStatus,
-                  fileNameSignature: fileNameSignature,
-                  filePathSignature: _selectedSignature?.path.toString(),
-                )),
-          );
-          final data = response.data;
-          if (data is Map<String, dynamic>) {
-            final result = data["result"];
-            final message = data["message"];
-            print("✅ Success: $message");
-            ScaffoldMessenger.of(context).showSnackBar(
-              SnackBar(content: Text(message ?? "OTP sent successfully")),
-            );
-          } else {
-            print("⚠️ Unexpected response format: $data");
-          }
-        } else {
-          print("❌ Failed with status: ${response.statusCode}");
+
+        // Build profile update data
+        final Map<String, dynamic> profileData = {
+          "fullName": _nameController.text.trim(),
+          "email": _emailController.text.trim(),
+          "dob": _dobController.text.trim(),
+          "gender": selectedGender ?? '',
+          "fatherName": _fatherNameController.text.trim(),
+          "motherName": _motherNameController.text.trim(),
+          "address": _addressController.text.trim(),
+          "rollCode": _rollCodeController.text.trim(),
+          "rollNumber": _rollNoController.text.trim(),
+          "registrationNumber": _registrationController.text.trim(),
+          "schoolName": selectedSchool ?? '',
+          "class": selectedClass ?? '',
+          "stream": _streamController.text.trim(),
+          "udiseCode": _udiseController.text.trim(),
+          "aadhaarNumber": _aadhaarController.text.trim(),
+          "caste": selectedCaste,
+          "religion": selectedReligion,
+          "differentlyAbled": selectedDifferentlyAbled,
+          "maritalStatus": selectedMaritalStatus,
+          "area": selectedArea,
+          "district": selectedDistrict,
+          "block": selectedBlock,
+          "state": selectedDivisions,
+        };
+
+        // Only include password if user wants to change it
+        if (_passwordController.text.isNotEmpty) {
+          profileData["password"] = _passwordController.text.trim();
+        }
+
+        // Use AuthController to update profile
+        final authController = Get.find<AuthController>();
+        final success = await authController.updateUserProfile(profileData);
+
+        if (!success) {
+          Navigator.pop(context); // Close loading dialog
           ScaffoldMessenger.of(context).showSnackBar(
-            SnackBar(content: Text("Failed to send OTP. Try again.")),
+            SnackBar(content: Text(authController.error.isNotEmpty
+                ? authController.error
+                : "Failed to update profile")),
+          );
+          return;
+        }
+
+        // Upload photo if selected
+        bool photoUploadSuccess = true;
+        if (_selectedPhoto != null) {
+          debugPrint("Uploading photo: ${_selectedPhoto!.path}");
+          photoUploadSuccess = await authController.uploadProfileImage(
+            filePath: _selectedPhoto!.path,
+            type: 'photo',
+          );
+          if (!photoUploadSuccess) {
+            debugPrint("Photo upload failed: ${authController.error}");
+          }
+        }
+
+        // Upload signature if selected
+        bool signatureUploadSuccess = true;
+        if (_selectedSignature != null) {
+          debugPrint("Uploading signature: ${_selectedSignature!.path}");
+          signatureUploadSuccess = await authController.uploadProfileImage(
+            filePath: _selectedSignature!.path,
+            type: 'signature',
+          );
+          if (!signatureUploadSuccess) {
+            debugPrint("Signature upload failed: ${authController.error}");
+          }
+        }
+
+        Navigator.pop(context); // Close loading dialog
+
+        // Show appropriate message based on upload results
+        if (photoUploadSuccess && signatureUploadSuccess) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text("profile_updated_successfully".tr)),
+          );
+          Navigator.pop(context); // Go back to profile screen
+        } else {
+          String errorMsg = "Profile updated, but ";
+          if (!photoUploadSuccess) errorMsg += "photo upload failed. ";
+          if (!signatureUploadSuccess) errorMsg += "signature upload failed.";
+          ScaffoldMessenger.of(context).showSnackBar(
+            SnackBar(content: Text(errorMsg)),
           );
         }
-      } on DioError catch (e) {
-        // Dio-specific error
-        print("❌ Dio error: ${e.message}");
+      } on DioException catch (e) {
+        Navigator.pop(context);
+        debugPrint("Dio error: ${e.message}");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Network error: ${e.message}")),
         );
       } catch (e) {
-        // Other errors
-        print("❌ Unexpected error: $e");
+        Navigator.pop(context);
+        debugPrint("Unexpected error: $e");
         ScaffoldMessenger.of(context).showSnackBar(
           SnackBar(content: Text("Something went wrong")),
         );

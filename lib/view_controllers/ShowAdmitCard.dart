@@ -121,7 +121,7 @@ import '../utilities/SharedPreferencesHelper.dart';
       // "DOB": "01-01-2006"
       try {
         Utils.progressbar(context, CustomColors.theme_orange);
-        const String apiUrl = Constant.BASE_URL + Constant.DOWNLOAD_ADMIT_CARD_New;
+        final String apiUrl = Constant.BASE_URL + Constant.DOWNLOAD_ADMIT_CARD_New;
 
         final response = await _dio.post(
           apiUrl,
@@ -158,7 +158,7 @@ import '../utilities/SharedPreferencesHelper.dart';
     Future<void> _getMarkSheetLink() async {
       try {
         Utils.progressbar(context, CustomColors.theme_orange);
-        const String apiUrl = Constant.BASE_URL + Constant.DOWNLOAD_MARKSHEET;
+        final String apiUrl = Constant.BASE_URL + Constant.DOWNLOAD_MARKSHEET;
 
         final response = await _dio.post(
           apiUrl,

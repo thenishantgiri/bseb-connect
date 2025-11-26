@@ -9,7 +9,7 @@ class Environment {
 
   /// Current environment - change this for different deployments
   /// You can also set this via build flags or environment variables
-  static const String current = _dev;
+  static const String current = _prod;
 
   /// Check if running in development
   static bool get isDevelopment => current == _dev;

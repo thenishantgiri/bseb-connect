@@ -37,7 +37,7 @@ class _ChangePasswordScreenState extends State<ChangePasswordScreen> {
     }
     try {
       Utils.progressbar(context,CustomColors.themeColorBlack);
-      const String apiUrl = Constant.BASE_URL+Constant.SET_PASSWORD;
+      final String apiUrl = Constant.BASE_URL+Constant.SET_PASSWORD;
       Response response = await _dio.post(
         apiUrl,
         data: {

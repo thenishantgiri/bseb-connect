@@ -16,35 +16,34 @@ dependencies:
     sdk: flutter
   intl: ^0.20.2
 
-  dio: ^5.0.0
-  flutter_spinkit: ^5.1.0
-  sn_progress_dialog: ^1.1.3
-  shared_preferences: ^2.3.3
-  image_picker: ^0.8.7+4
-  flutter_launcher_icons: ^0.14.2
-  url_launcher: ^6.3.1
-  webview_flutter: ^4.10.0
-  flutter_downloader: ^1.8.1
-  path_provider: ^2.0.11
-  pdf: ^3.6.0
-  printing: ^5.10.0
+  dio: ^5.9.0
+  flutter_spinkit: ^5.2.2
+  sn_progress_dialog: ^1.2.0
+  shared_preferences: ^2.5.3
+  image_picker: ^1.2.1
+  flutter_launcher_icons: ^0.14.4
+  url_launcher: ^6.3.2
+  webview_flutter: ^4.13.0
+  flutter_downloader: ^1.12.0
+  path_provider: ^2.1.5
+  pdf: ^3.11.3
+  printing: ^5.14.2
   marquee: ^2.3.0
   sms_autofill: ^2.3.0
-  firebase_core: ^3.6.0
-  firebase_messaging: ^15.1.3
-  image: ^4.3.0
-  google_maps_flutter: ^2.2.3
-  geolocator: ^13.0.2
+  firebase_core: ^4.2.1
+  firebase_messaging: ^16.0.4
+  image: ^4.5.4
+  google_maps_flutter: ^2.14.0
+  geolocator: ^14.0.2
   cupertino_icons: ^1.0.8
-  syncfusion_flutter_pdfviewer: ^31.1.18
+  syncfusion_flutter_pdfviewer: ^31.2.12
   get: ^4.6.5   # For state management and easy localization
   google_sign_in: ^7.0.0
-  googleapis: ^13.0.0
-  googleapis_auth: ^1.6.0
-  file_picker: ^8.0.0
+  googleapis: ^15.0.0
+  googleapis_auth: ^2.0.0
+  file_picker: ^10.3.7
   open_filex: ^4.4.0
-
-
+  cached_network_image: ^3.4.1  # For image caching and better performance
 
 
 
@@ -57,7 +56,7 @@ flutter_icons:
 dev_dependencies:
   flutter_test:
     sdk: flutter
-  flutter_lints: ^4.0.0
+  flutter_lints: ^6.0.0
 
 flutter:
   uses-material-design: true
@@ -82,4 +81,3 @@ flutter:
     - assets/pdfs/other_contacts.pdf
     - assets/pdfs/Marksheet_certification_correction.pdf
     - assets/pdfs/
-

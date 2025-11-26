@@ -5,9 +5,10 @@ import 'package:bseb/utilities/Constant.dart';
 import 'package:bseb/utilities/CustomColors.dart';
 import 'package:bseb/utilities/Utils.dart';
 import 'package:bseb/view_controllers/OtpScreen.dart';
+import 'package:bseb/view_controllers/LoginScreen.dart';
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:get/get.dart';
+import 'package:get/get.dart' hide FormData, MultipartFile;
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
 import 'package:intl/intl.dart';
@@ -28,6 +29,13 @@ class _SignUpScreenState extends State<SignUpScreen> {
   bool _isConfirmPasswordHidden = true;
   File? _selectedPhoto;
   File? _selectedSignature;
+
+  // OTP Verification state
+  bool _isEmailVerified = false;
+  bool _isPhoneVerified = false;
+  bool _isOtpSent = false;
+  String? _verificationIdentifier;
+  final TextEditingController _otpController = TextEditingController();
 
   final AuthController _authController = Get.put(AuthController());
   final _formKey = GlobalKey<FormState>();
@@ -340,6 +348,7 @@ class _SignUpScreenState extends State<SignUpScreen> {
     _aadhaarController.dispose();
     _udiseController.dispose();
     _streamController.dispose();
+    _otpController.dispose();
     super.dispose();
   }
 
@@ -545,22 +554,33 @@ class _SignUpScreenState extends State<SignUpScreen> {
                           //     "mother_name".tr, _motherNameController),
                           // const SizedBox(height: 16),
 
-                          _buildTextFormField("email_address".tr, _emailController,
-                              inputType: TextInputType.emailAddress,
-                              validator: (v) {
-                            if (v != null && v.isNotEmpty && !v.contains("@"))
-                              return "Invalid email";
-                            return null;
-                          }),
+                          // Email with Verify Button
+                          _buildVerificationField(
+                            label: "email_address".tr,
+                            controller: _emailController,
+                            isVerified: _isEmailVerified,
+                            inputType: TextInputType.emailAddress,
+                            validator: (v) {
+                              if (v == null || v.isEmpty) return "Email is required";
+                              if (!v.contains("@")) return "Invalid email";
+                              return null;
+                            },
+                            onVerify: () => _sendOtp(_emailController.text.trim(), 'email'),
+                          ),
                           const SizedBox(height: 16),
 
-                          _buildTextFormField(
-                              _label("mobile_number".tr, required: true),
-                              _numberController,
-                              inputType: TextInputType.phone,
-                              validator: (v) => v == null || v.length != 10
-                                  ? "Enter 10-digit mobile"
-                                  : null),
+                          // Phone with Verify Button
+                          _buildVerificationField(
+                            label: "mobile_number".tr,
+                            controller: _numberController,
+                            isVerified: _isPhoneVerified,
+                            inputType: TextInputType.phone,
+                            isRequired: true,
+                            validator: (v) => v == null || v.length != 10
+                                ? "Enter 10-digit mobile"
+                                : null,
+                            onVerify: () => _sendOtp(_numberController.text.trim(), 'phone'),
+                          ),
                           const SizedBox(height: 16),
 
                           // _buildTextFormField(
@@ -682,6 +702,15 @@ class _SignUpScreenState extends State<SignUpScreen> {
                                 if (v == null || v.isEmpty)
                                   return "Password required";
                                 if (v.length < 8) return "Min 8 chars required";
+                                // Password complexity validation
+                                if (!RegExp(r'[A-Z]').hasMatch(v))
+                                  return "Must contain uppercase letter";
+                                if (!RegExp(r'[a-z]').hasMatch(v))
+                                  return "Must contain lowercase letter";
+                                if (!RegExp(r'[0-9]').hasMatch(v))
+                                  return "Must contain a number";
+                                if (!RegExp(r'[!@#$%^&*(),.?":{}|<>]').hasMatch(v))
+                                  return "Must contain special character";
                                 return null;
                               }),
                           const SizedBox(height: 16),
@@ -782,58 +811,196 @@ class _SignUpScreenState extends State<SignUpScreen> {
     );
   }
 
+  // ---------- OTP VERIFICATION METHODS ----------
+
+  /// Send OTP for email or phone verification
+  Future<void> _sendOtp(String identifier, String type) async {
+    if (identifier.isEmpty) {
+      _showError(type == 'email' ? "Please enter email first" : "Please enter phone number first");
+      return;
+    }
+
+    // Validate email format
+    if (type == 'email' && !identifier.contains('@')) {
+      _showError("Please enter a valid email address");
+      return;
+    }
+
+    // Validate phone format
+    if (type == 'phone' && identifier.length != 10) {
+      _showError("Please enter a valid 10-digit phone number");
+      return;
+    }
+
+    Utils.progressbar(context, CustomColors.themeColorBlack);
+
+    final success = await _authController.sendRegistrationOtp(identifier);
+
+    Navigator.pop(context); // Close loading
+
+    if (success) {
+      setState(() {
+        _verificationIdentifier = identifier;
+        _isOtpSent = true;
+      });
+      _showOtpDialog(type);
+    } else {
+      _showError(_authController.error.isNotEmpty
+          ? _authController.error
+          : "Failed to send OTP. Please try again.");
+    }
+  }
+
+  /// Show OTP verification dialog
+  void _showOtpDialog(String type) {
+    _otpController.clear();
+
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (context) => AlertDialog(
+        title: Text("verify_otp".tr),
+        content: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Text(
+              type == 'email'
+                  ? "OTP sent to ${_emailController.text}"
+                  : "OTP sent to ${_numberController.text}",
+              style: const TextStyle(fontSize: 14),
+            ),
+            const SizedBox(height: 16),
+            TextField(
+              controller: _otpController,
+              keyboardType: TextInputType.number,
+              maxLength: 6,
+              decoration: InputDecoration(
+                labelText: "enter_otp".tr,
+                border: OutlineInputBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+            ),
+          ],
+        ),
+        actions: [
+          TextButton(
+            onPressed: () {
+              Navigator.pop(context);
+            },
+            child: Text("cancel".tr),
+          ),
+          ElevatedButton(
+            style: ElevatedButton.styleFrom(
+              backgroundColor: const Color(0xFF970202),
+            ),
+            onPressed: () => _verifyOtp(type),
+            child: Text("verify".tr, style: const TextStyle(color: Colors.white)),
+          ),
+        ],
+      ),
+    );
+  }
+
+  /// Verify OTP
+  Future<void> _verifyOtp(String type) async {
+    if (_otpController.text.isEmpty || _otpController.text.length != 6) {
+      _showError("Please enter a valid 6-digit OTP");
+      return;
+    }
+
+    Utils.progressbar(context, CustomColors.themeColorBlack);
+
+    final success = await _authController.verifyRegistrationOtp(
+      _verificationIdentifier!,
+      _otpController.text.trim(),
+    );
+
+    Navigator.pop(context); // Close loading
+    Navigator.pop(context); // Close dialog
+
+    if (success) {
+      setState(() {
+        if (type == 'email') {
+          _isEmailVerified = true;
+        } else {
+          _isPhoneVerified = true;
+        }
+      });
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(type == 'email' ? "Email verified!" : "Phone verified!"),
+          backgroundColor: Colors.green,
+        ),
+      );
+    } else {
+      _showError(_authController.error.isNotEmpty
+          ? _authController.error
+          : "Invalid OTP. Please try again.");
+    }
+  }
+
   // ---------- VALIDATION & SUBMIT ----------
   Future<void> _submitForm() async {
     if (_formKey.currentState!.validate()) {
-      if (_selectedPhoto == null) {
-        _showError("Please upload passport photo");
-        return;
-      }
-      if (_selectedSignature == null) {
-        _showError("Please upload signature");
+      // Check if at least email or phone is verified
+      if (!_isEmailVerified && !_isPhoneVerified) {
+        _showError("Please verify your email or phone number before registration");
         return;
       }
 
-      final phone = _numberController.text.trim();
-      
       Utils.progressbar(context, CustomColors.themeColorBlack);
-      
-      // Step 1: Send OTP for login/registration verification
-      final success = await _authController.sendOtp(phone);
-      
-      Navigator.pop(context);
+
+      // Register - backend will verify that email/phone is verified
+      await _registerStudent();
+    }
+  }
+
+  /// Register student directly with the NestJS backend
+  Future<void> _registerStudent() async {
+    try {
+      // Send JSON data - backend expects JSON format
+      final Map<String, dynamic> registrationData = {
+        "phone": _numberController.text.trim(),
+        "email": _emailController.text.trim(),
+        "fullName": _nameController.text.trim(),
+        "password": _passwordController.text.trim(),
+        "class": selectedClass ?? '',
+        "gender": selectedGender ?? '',
+        "dob": _dobController.text.trim(),
+        "rollCode": _rollCodeController.text.trim(),
+        "rollNumber": _rollNoController.text.trim(),
+        "registrationNumber": _registrationController.text.trim(),
+        "fatherName": _fatherNameController.text.trim(),
+        "motherName": _motherNameController.text.trim(),
+        "address": _addressController.text.trim(),
+        "schoolName": selectedSchool ?? '',
+        "aadhaarNumber": _aadhaarController.text.trim(),
+        "udiseCode": _udiseController.text.trim(),
+        "stream": _streamController.text.trim(),
+      };
+
+      // Log the registration data for debugging
+      debugPrint("Registration data: $registrationData");
+
+      final success = await _authController.registerStudent(registrationData);
+
+      Navigator.pop(context); // Close loading dialog
 
       if (success) {
-        Utils.snackBarSuccess(context, 'otp_sent'.tr);
-        Navigator.push(
+        Utils.snackBarSuccess(context, 'registration_successful'.tr);
+        Navigator.pushReplacement(
           context,
-          MaterialPageRoute(
-              builder: (context) => OtpScreen(
-                    name: _nameController.text.trim(),
-                    email: _emailController.text.trim(),
-                    number: _numberController.text.trim(),
-                    confirmPassword: _confirmPasswordController.text.trim(),
-                    rollCode: _rollCodeController.text.trim(),
-                    rollNo: _rollNoController.text.trim(),
-                    registration: _registrationController.text.trim(),
-                    dob: _dobController.text.trim(),
-                    otp: '', // OTP handled by SMS
-                    fatherName: _fatherNameController.text.trim(),
-                    motherName: _motherNameController.text.trim(),
-                    address: _addressController.text.trim(),
-                    aadhaar: _aadhaarController.text.trim(),
-                    udise: _udiseController.text.trim(),
-                    stream: _streamController.text.trim(),
-                    selectedClass: selectedClass ?? '',
-                    selectedGender: selectedGender,
-                    photoFile: _selectedPhoto,
-                    signatureFile: _selectedSignature,
-                    password: _passwordController.text.trim(),
-                  )),
+          MaterialPageRoute(builder: (context) => LoginScreen()),
         );
       } else {
-        _showError(_authController.error.isNotEmpty ? _authController.error : "Failed to send OTP");
+        _showError(_authController.error.isNotEmpty
+            ? _authController.error
+            : "Registration failed. Please try again.");
       }
+    } catch (e) {
+      Navigator.pop(context); // Close loading dialog
+      _showError("Registration failed: ${e.toString()}");
     }
   }
 
@@ -1012,6 +1179,74 @@ class _SignUpScreenState extends State<SignUpScreen> {
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: Color(CustomColors.theme_orange)),
       ),
+    );
+  }
+
+  /// Build text field with verification button
+  Widget _buildVerificationField({
+    required String label,
+    required TextEditingController controller,
+    required bool isVerified,
+    required TextInputType inputType,
+    required VoidCallback onVerify,
+    String? Function(String?)? validator,
+    bool isRequired = false,
+  }) {
+    return Row(
+      crossAxisAlignment: CrossAxisAlignment.start,
+      children: [
+        Expanded(
+          child: TextFormField(
+            controller: controller,
+            keyboardType: inputType,
+            cursorColor: const Color(CustomColors.theme_orange),
+            validator: validator,
+            enabled: !isVerified, // Disable editing after verification
+            decoration: InputDecoration(
+              label: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Text(label),
+                  if (isRequired) const Text(" *", style: TextStyle(color: Colors.red)),
+                  if (isVerified) ...[
+                    const SizedBox(width: 8),
+                    const Icon(Icons.check_circle, color: Colors.green, size: 18),
+                  ],
+                ],
+              ),
+              labelStyle: const TextStyle(color: Colors.black),
+              border: OutlineInputBorder(borderRadius: BorderRadius.circular(10)),
+              focusedBorder: OutlineInputBorder(
+                borderRadius: BorderRadius.circular(10),
+                borderSide: const BorderSide(color: Color(CustomColors.theme_orange)),
+              ),
+              suffixIcon: isVerified
+                  ? const Padding(
+                      padding: EdgeInsets.all(12),
+                      child: Text("Verified", style: TextStyle(color: Colors.green, fontWeight: FontWeight.bold)),
+                    )
+                  : null,
+            ),
+          ),
+        ),
+        if (!isVerified) ...[
+          const SizedBox(width: 8),
+          Padding(
+            padding: const EdgeInsets.only(top: 4),
+            child: ElevatedButton(
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF970202),
+                padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 16),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(10),
+                ),
+              ),
+              onPressed: onVerify,
+              child: Text("verify".tr, style: const TextStyle(color: Colors.white, fontSize: 12)),
+            ),
+          ),
+        ],
+      ],
     );
   }
 }

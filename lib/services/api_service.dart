@@ -103,6 +103,32 @@ class ApiService {
     }
   }
 
+  /// Send OTP for registration verification (email or phone)
+  Future<ApiResponse<Map<String, dynamic>>> sendRegistrationOtp(String identifier) async {
+    try {
+      final response = await _dio.post(
+        '${Constant.BASE_URL}/auth/register/send-otp',
+        data: {'identifier': identifier},
+      );
+      return ApiResponse.fromJson(response.data, (data) => data as Map<String, dynamic>);
+    } catch (e) {
+      return ApiResponse(status: 0, message: ErrorHandler.handleError(e));
+    }
+  }
+
+  /// Verify OTP for registration
+  Future<ApiResponse<Map<String, dynamic>>> verifyRegistrationOtp(String identifier, String otp) async {
+    try {
+      final response = await _dio.post(
+        '${Constant.BASE_URL}/auth/register/verify-otp',
+        data: {'identifier': identifier, 'otp': otp},
+      );
+      return ApiResponse.fromJson(response.data, (data) => data as Map<String, dynamic>);
+    } catch (e) {
+      return ApiResponse(status: 0, message: ErrorHandler.handleError(e));
+    }
+  }
+
   /// Store JWT token in SharedPreferences
   Future<void> _storeJwtToken(String token) async {
     final prefs = await SharedPreferences.getInstance();
@@ -328,6 +354,50 @@ class ApiService {
       message: 'No notifications',
       data: [],
     );
+  }
+
+  /// Upload profile image (photo or signature)
+  /// Uses multipart/form-data to upload file to POST /profile/image/:type
+  Future<ApiResponse<StudentModel>> uploadProfileImage({
+    required String filePath,
+    required String type, // 'photo' or 'signature'
+  }) async {
+    try {
+      final token = await getJwtToken();
+      if (token == null) {
+        return ApiResponse(status: 0, message: 'Not authenticated');
+      }
+
+      // Create FormData for file upload
+      final formData = FormData.fromMap({
+        'image': await MultipartFile.fromFile(
+          filePath,
+          filename: '${type}_${DateTime.now().millisecondsSinceEpoch}.jpg',
+        ),
+      });
+
+      final response = await _dio.post(
+        '${Constant.BASE_URL}/profile/image/$type',
+        data: formData,
+        options: Options(
+          headers: {
+            'Authorization': 'Bearer $token',
+            'Content-Type': 'multipart/form-data',
+          },
+        ),
+      );
+
+      if (response.data['status'] == 1 && response.data['data'] != null) {
+        return ApiResponse(
+          status: 1,
+          message: response.data['message'] ?? 'Image uploaded successfully',
+          data: StudentModel.fromJson(response.data['data']),
+        );
+      }
+      return ApiResponse(status: 0, message: response.data['message'] ?? 'Upload failed');
+    } catch (e) {
+      return ApiResponse(status: 0, message: ErrorHandler.handleError(e));
+    }
   }
 
   // ==================== BSEB VERIFICATION (Path A Registration) ====================

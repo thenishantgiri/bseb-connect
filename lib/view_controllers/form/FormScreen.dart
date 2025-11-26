@@ -123,7 +123,7 @@ print("object"+ await sharedPreferencesHelper.getPref(Constant.PHONE));
     }
     try {
       Utils.progressbar(context, CustomColors.themeColorBlack);
-      const String apiUrl = Constant.BASE_URL + Constant.INFRORMATION;
+      final String apiUrl = Constant.BASE_URL + Constant.INFRORMATION;
     Response response = await _dio.post(
         apiUrl,
         data: {
@@ -171,7 +171,7 @@ print("object"+ await sharedPreferencesHelper.getPref(Constant.PHONE));
 
     try {
       Utils.progressbar(context, CustomColors.themeColorBlack);
-      const String apiUrl = Constant.BASE_URL + Constant.UPDATE_ADDRESS_FORM;
+      final String apiUrl = Constant.BASE_URL + Constant.UPDATE_ADDRESS_FORM;
     Response response = await _dio.post(
         apiUrl,
         data: {
@@ -212,7 +212,7 @@ print("object"+ await sharedPreferencesHelper.getPref(Constant.PHONE));
 
     try {
       Utils.progressbar(context, CustomColors.themeColorBlack);
-      const String apiUrl = Constant.BASE_URL + Constant.UPDATE_STUDENT_IMAGE;
+      final String apiUrl = Constant.BASE_URL + Constant.UPDATE_STUDENT_IMAGE;
       Response response = await _dio.post(
         apiUrl,
         data: {

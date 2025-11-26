@@ -1,64 +1,59 @@
 import 'package:bseb/view_controllers/SplashScreen.dart';
+import 'package:bseb/utilities/SharedPreferencesHelper.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter/foundation.dart';
 import 'package:get/get.dart';
-import 'translation.dart'; // Translation file we'll create
+import 'translation.dart';
 
 import 'firebase_options.dart';
 
 Future<void> main() async {
-  if (kDebugMode) {
-    debugPrint('🚀 APP STARTING: main() called');
-  }
   WidgetsFlutterBinding.ensureInitialized();
-  if (kDebugMode) {
-    debugPrint('✅ WidgetsFlutterBinding initialized');
-  }
 
-  // Initialize Firebase with generated options
+  // Initialize SharedPreferences early for faster access throughout the app
+  await SharedPreferencesHelper.init();
+
+  // Initialize Firebase with timeout to prevent blocking
   try {
-    if (kDebugMode) {
-      debugPrint('🔥 Attempting Firebase.initializeApp...');
-    }
     await Firebase.initializeApp(
       options: DefaultFirebaseOptions.currentPlatform,
     ).timeout(const Duration(seconds: 5));
-    if (kDebugMode) {
-      debugPrint('✅ Firebase initialized successfully');
-    }
   } catch (e) {
     if (kDebugMode) {
-      debugPrint('❌ Firebase initialization failed or timed out: $e');
+      debugPrint('Firebase initialization failed: $e');
     }
   }
 
   // Load translations
   try {
-    if (kDebugMode) {
-      debugPrint('🌍 Initializing AppTranslation...');
-    }
     await AppTranslation.init();
-    if (kDebugMode) {
-      debugPrint('✅ AppTranslation initialized');
-    }
   } catch (e) {
     if (kDebugMode) {
-      debugPrint('❌ AppTranslation initialization failed: $e');
+      debugPrint('AppTranslation initialization failed: $e');
     }
   }
 
-  if (kDebugMode) {
-    debugPrint('🚀 Calling runApp(MyApp)...');
-  }
-  runApp(MyApp());
+  runApp(const MyApp());
 }
 
-class MyApp extends StatelessWidget {
+class MyApp extends StatefulWidget {
+  const MyApp({super.key});
+
   @override
-  Widget build(BuildContext context) {
-    // 🔹 Firebase messaging setup (only if Firebase was initialized)
+  State<MyApp> createState() => _MyAppState();
+}
+
+class _MyAppState extends State<MyApp> {
+  @override
+  void initState() {
+    super.initState();
+    // Move Firebase messaging setup to initState (runs only once)
+    _setupFirebaseMessaging();
+  }
+
+  void _setupFirebaseMessaging() {
     try {
       FirebaseMessaging.instance.getInitialMessage().then((RemoteMessage? message) {
         if (message != null && kDebugMode) {
@@ -82,13 +77,24 @@ class MyApp extends StatelessWidget {
         debugPrint('Firebase messaging not available: $e');
       }
     }
+  }
 
+  @override
+  Widget build(BuildContext context) {
     return GetMaterialApp(
       debugShowCheckedModeBanner: false,
       translations: AppTranslation(),
-      locale: const Locale('en', 'US'), // default language
+      locale: const Locale('en', 'US'),
       fallbackLocale: const Locale('en', 'US'),
-      home: SplashScreen(),
+      home: const SplashScreen(),
+      // Performance optimizations
+      builder: (context, child) {
+        return MediaQuery(
+          // Prevent text scaling issues
+          data: MediaQuery.of(context).copyWith(textScaler: TextScaler.noScaling),
+          child: child!,
+        );
+      },
     );
   }
 }

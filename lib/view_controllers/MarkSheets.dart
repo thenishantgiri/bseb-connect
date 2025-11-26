@@ -35,7 +35,7 @@ class _MarksheetScreenState extends State<MarksheetScreen> {
   Future<void> _getMarkSheet() async {
     try {
       Utils.progressbar(context, CustomColors.theme_orange);
-      const String apiUrl = Constant.BASE_URL + Constant.SHOW_MARKSHEET;
+      final String apiUrl = Constant.BASE_URL + Constant.SHOW_MARKSHEET;
 
       final response = await _dio.post(
         apiUrl,
