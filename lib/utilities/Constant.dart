@@ -16,8 +16,8 @@ class Constant {
   // ==================== NestJS API ENDPOINTS ====================
   
   // Auth Endpoints
-  static const String SEND_OTP_LOGIN = 'auth/login/otp';
-  static const String VERIFY_LOGIN_OTP = 'auth/login/verify';
+  static const String SEND_OTP_LOGIN = 'auth/send-otp';
+  static const String VERIFY_LOGIN_OTP = 'auth/verify-otp';
   static const String LOGIN_PASSWORD = 'auth/login/password';
   static const String REGISTER = 'auth/register';
   static const String FORGOT_PASSWORD = 'auth/password/forgot';
@@ -25,6 +25,8 @@ class Constant {
   static const String SET_PASSWORD = 'auth/password/reset'; // Alias for ChangePasswordScreen
   static const String VERIFY_BSEB_CREDENTIALS = 'auth/verify-bseb-credentials';
   static const String REGISTER_BSEB_LINKED = 'auth/register/bseb-linked';
+  static const String SEND_REGISTRATION_OTP = 'auth/register/send-otp';
+  static const String VERIFY_REGISTRATION_OTP = 'auth/register/verify-otp';
 
   // Profile Endpoints (require JWT)
   static const String GET_PROFILE = 'profile';

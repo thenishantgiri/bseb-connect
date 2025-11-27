@@ -113,14 +113,11 @@ class _HomescreenState extends State<Homescreen> {
   }
 
   Future<void> _loadImageUrl() async {
-    final String? url = await sharedPreferencesHelper.getPref("Photo");
+    final String? url = await sharedPreferencesHelper.getPref("photoUrl");
     setState(() {
       // Only process if url is not null
       if (url != null && url.isNotEmpty) {
-        imageUrl = url
-            .trim()
-            .replaceAll(' ', '')
-            .replaceAll('studentprofile', 'signature');
+        imageUrl = url.trim();
       } else {
         imageUrl = null;
       }

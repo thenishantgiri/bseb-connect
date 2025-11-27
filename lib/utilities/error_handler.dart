@@ -44,6 +44,11 @@ class ErrorHandler {
       case DioExceptionType.receiveTimeout:
         return 'receive_timeout'.tr;
       case DioExceptionType.badResponse:
+        // First try to extract the actual error message from the backend response
+        final backendMessage = _extractBackendMessage(error.response?.data);
+        if (backendMessage != null) {
+          return backendMessage;
+        }
         return _handleStatusCode(error.response?.statusCode);
       case DioExceptionType.cancel:
         return 'request_cancelled'.tr;
@@ -52,6 +57,24 @@ class ErrorHandler {
       default:
         return 'network_error'.tr;
     }
+  }
+
+  /// Extract error message from backend response
+  static String? _extractBackendMessage(dynamic data) {
+    if (data == null) return null;
+
+    try {
+      if (data is Map) {
+        // Check for common error message fields
+        final message = data['message'] ?? data['error'] ?? data['msg'];
+        if (message != null && message is String && message.isNotEmpty) {
+          return message;
+        }
+      }
+    } catch (e) {
+      // Ignore parsing errors
+    }
+    return null;
   }
 
   /// Get message for HTTP status codes
@@ -67,6 +90,8 @@ class ErrorHandler {
         return 'not_found'.tr;
       case 408:
         return 'request_timeout'.tr;
+      case 429:
+        return 'too_many_attempts'.tr;
       case 500:
         return 'server_error'.tr;
       case 502:

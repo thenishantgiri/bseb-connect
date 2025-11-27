@@ -27,13 +27,13 @@ class Environment {
   static String get baseUrl {
     switch (current) {
       case _dev:
-        return 'http://65.2.113.83/api/'; // Development server
+        return 'http://localhost:3000/'; // Local development server
       case _staging:
         return 'http://65.2.113.83/api/'; // Staging server
       case _prod:
         return 'https://bseb-backend.mvpl.info/api/'; // Production server
       default:
-        return 'http://65.2.113.83/api/';
+        return 'http://localhost:3000/';
     }
   }
 

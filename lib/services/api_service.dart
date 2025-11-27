@@ -26,7 +26,16 @@ class ApiService {
         '${Constant.BASE_URL}${Constant.SEND_OTP_LOGIN}',
         data: {'identifier': identifier},
       );
-      return ApiResponse.fromJson(response.data, (data) => data as Map<String, dynamic>);
+
+      // Backend returns { success: true/false, message: '...' } format
+      final data = response.data;
+      final isSuccess = data['success'] == true || data['status'] == 1;
+
+      return ApiResponse(
+        status: isSuccess ? 1 : 0,
+        message: data['message'] ?? (isSuccess ? 'OTP sent successfully' : 'Failed to send OTP'),
+        data: data as Map<String, dynamic>,
+      );
     } catch (e) {
       return ApiResponse(status: 0, message: ErrorHandler.handleError(e));
     }
@@ -107,7 +116,7 @@ class ApiService {
   Future<ApiResponse<Map<String, dynamic>>> sendRegistrationOtp(String identifier) async {
     try {
       final response = await _dio.post(
-        '${Constant.BASE_URL}/auth/register/send-otp',
+        '${Constant.BASE_URL}${Constant.SEND_REGISTRATION_OTP}',
         data: {'identifier': identifier},
       );
       return ApiResponse.fromJson(response.data, (data) => data as Map<String, dynamic>);
@@ -120,7 +129,7 @@ class ApiService {
   Future<ApiResponse<Map<String, dynamic>>> verifyRegistrationOtp(String identifier, String otp) async {
     try {
       final response = await _dio.post(
-        '${Constant.BASE_URL}/auth/register/verify-otp',
+        '${Constant.BASE_URL}${Constant.VERIFY_REGISTRATION_OTP}',
         data: {'identifier': identifier, 'otp': otp},
       );
       return ApiResponse.fromJson(response.data, (data) => data as Map<String, dynamic>);
@@ -377,7 +386,7 @@ class ApiService {
       });
 
       final response = await _dio.post(
-        '${Constant.BASE_URL}/profile/image/$type',
+        '${Constant.BASE_URL}profile/image/$type',
         data: formData,
         options: Options(
           headers: {
@@ -387,11 +396,19 @@ class ApiService {
         ),
       );
 
-      if (response.data['status'] == 1 && response.data['data'] != null) {
+      if (response.data['status'] == 1) {
+        // Backend may return data with updated user, or just success message
+        if (response.data['data'] != null) {
+          return ApiResponse(
+            status: 1,
+            message: response.data['message'] ?? 'Image uploaded successfully',
+            data: StudentModel.fromJson(response.data['data']),
+          );
+        }
+        // Success without data - upload worked
         return ApiResponse(
           status: 1,
           message: response.data['message'] ?? 'Image uploaded successfully',
-          data: StudentModel.fromJson(response.data['data']),
         );
       }
       return ApiResponse(status: 0, message: response.data['message'] ?? 'Upload failed');

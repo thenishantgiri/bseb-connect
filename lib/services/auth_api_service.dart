@@ -23,7 +23,7 @@ class AuthApiService {
   Future<ApiResponse<Map<String, dynamic>>> sendLoginOtp(String identifier) async {
     try {
       final response = await _dio.post(
-        '${Constant.BASE_URL}auth/login/otp',
+        '${Constant.BASE_URL}${Constant.SEND_OTP_LOGIN}',
         data: {'identifier': identifier},
       );
       return ApiResponse.fromJson(response.data, (data) => data as Map<String, dynamic>);
@@ -40,7 +40,7 @@ class AuthApiService {
   ) async {
     try {
       final response = await _dio.post(
-        '${Constant.BASE_URL}auth/login/verify',
+        '${Constant.BASE_URL}${Constant.VERIFY_LOGIN_OTP}',
         data: {
           'identifier': identifier,
           'otp': otp,

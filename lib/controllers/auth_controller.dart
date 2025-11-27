@@ -425,8 +425,11 @@ class AuthController extends GetxController {
 
     _isLoading.value = false;
 
-    if (response.isSuccess && response.data != null) {
-      await _saveUserData(response.data!);
+    if (response.isSuccess) {
+      // Save user data if returned (backend may or may not return updated user)
+      if (response.data != null) {
+        await _saveUserData(response.data!);
+      }
       return true;
     } else {
       _error.value = response.message;

@@ -46,7 +46,6 @@ class ProfileApiService {
     String? religion,
     String? maritalStatus,
     String? area,
-    String? differentlyAbled,
   }) async {
     try {
       Map<String, dynamic> data = {};
@@ -64,7 +63,6 @@ class ProfileApiService {
       if (religion != null) data['religion'] = religion;
       if (maritalStatus != null) data['maritalStatus'] = maritalStatus;
       if (area != null) data['area'] = area;
-      if (differentlyAbled != null) data['differentlyAbled'] = differentlyAbled;
 
       final response = await _dio.put(
         '${Constant.BASE_URL}profile',
@@ -85,7 +83,7 @@ class ProfileApiService {
   Future<ApiResponse<StudentModel>> uploadImage(String type, File imageFile) async {
     try {
       FormData formData = FormData.fromMap({
-        'file': await MultipartFile.fromFile(
+        'image': await MultipartFile.fromFile(
           imageFile.path,
           filename: '$type.jpg',
         ),

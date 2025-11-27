@@ -2,6 +2,7 @@ import 'dart:io';
 
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter_cache_manager/flutter_cache_manager.dart';
 import 'package:get/get.dart';
 import 'package:image/image.dart' as img;
 import 'package:image_picker/image_picker.dart';
@@ -14,6 +15,7 @@ import '../utilities/CustomColors.dart';
 import '../utilities/Constant.dart';
 import '../utilities/SharedPreferencesHelper.dart';
 import '../utilities/Utils.dart';
+import 'ChangePasswordProfileScreen.dart';
 import 'OtpScreen.dart';
 import 'dart:typed_data';
 import 'package:flutter/services.dart';
@@ -31,6 +33,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
   final Dio _dio = getDio(); // Use singleton Dio instance
   final _formKey = GlobalKey<FormState>();
+  final SharedPreferencesHelper sharedPreferencesHelper = SharedPreferencesHelper();
 
   // Controllers
   final TextEditingController _nameController = TextEditingController();
@@ -491,8 +494,6 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
 
 
   Future<void> _loadProfileDetails() async {
-    SharedPreferencesHelper sharedPreferencesHelper = SharedPreferencesHelper();
-
     // ✅ First try to fetch fresh data from API
     try {
       // Initialize AuthController if not already registered
@@ -526,10 +527,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
     imageUrl = await sharedPreferencesHelper.getPref("photoUrl");
     // Only process if imageUrl is not null
     if (imageUrl != null && imageUrl!.isNotEmpty) {
-      imageUrl = imageUrl!
-          .trim()
-          .replaceAll(' ', '')
-          .replaceAll('studentprofile', 'signature');
+      imageUrl = imageUrl!.trim();
     }
 
     signatureUrl = await sharedPreferencesHelper.getPref("signatureUrl");
@@ -669,11 +667,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       img.Image workingImage = decodedImage;
       int quality = 90;
 
-      // ✅ Adjust image to 40–100 KB
+      // ✅ Different size requirements for photo vs signature
+      final int minSize = type == "signature" ? 20 : 40;
+      final int maxSize = type == "signature" ? 60 : 100;
+
+      // ✅ Adjust image to target size range
       int loopCount = 0;
-      while ((sizeInKb < 40 || sizeInKb > 100) && loopCount < 15) {
+      while ((sizeInKb < minSize || sizeInKb > maxSize) && loopCount < 15) {
         // Downscale if too large
-        if (sizeInKb > 100) {
+        if (sizeInKb > maxSize) {
           if (quality > 30) {
             quality -= 5;
           } else {
@@ -685,7 +687,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           }
         }
         // Slightly upscale if too small
-        else if (sizeInKb < 40) {
+        else if (sizeInKb < minSize) {
           if (quality < 100) quality += 5;
           workingImage = img.copyResize(
             workingImage,
@@ -701,8 +703,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       }
 
       // ✅ Validate final size
-      if (sizeInKb < 40 || sizeInKb > 100) {
-        _showError("Image could not be adjusted to 40–100 KB. Please choose another image.");
+      if (sizeInKb < minSize || sizeInKb > maxSize) {
+        _showError("Image could not be adjusted to $minSize–$maxSize KB. Please choose another image.");
         return;
       }
 
@@ -829,41 +831,35 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                       key: _formKey,
                       child: Column(
                         children: [
-                          // Class
+                          // Class (Read-only - cannot be edited)
                           _buildDropdownField(
-                              _label("select_class".tr, required: true),
+                              _label("select_class".tr),
                               classList,
                               selectedClass,
                                   (val) => setState(() => selectedClass = val),
-                              validator: (v) =>
-                              v == null ? "Class is required" : null),
+                              enabled: false),
                           const SizedBox(height: 16),
 
-                          // Name
+                          // Name (Editable - optional)
                           _buildTextFormField(
-                              _label("full_name".tr, required: true),
-                              _nameController,
-                              validator: (v) => v == null || v.isEmpty
-                                  ? "Full Name required"
-                                  : null),
+                              _label("full_name".tr),
+                              _nameController),
                           const SizedBox(height: 16),
 
-                          // Gender
+                          // Gender (Read-only - cannot be edited)
                           _buildDropdownField(
-                              _label("gender".tr, required: true),
+                              _label("gender".tr),
                               genderList,
                               selectedGender,
                                   (val) => setState(() => selectedGender = val),
-                              validator: (v) =>
-                              v == null ? "Gender is required" : null),
+                              enabled: false),
                           const SizedBox(height: 16),
-                          // Caste Category
+                          // Caste Category (Editable - optional)
                           _buildDropdownField(
                             "caste_category".tr,
                             casteCategories,
                             selectedCaste,
                             (val) => setState(() => selectedCaste = val),
-                            isRequired: true,
                           ),
                           //
                           const SizedBox(height: 16),
@@ -876,82 +872,52 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           //   isRequired: true,
                           // ),
                           // const SizedBox(height: 16),
-                          Column(
-                            crossAxisAlignment: CrossAxisAlignment.start,
-                            children: [
-                              _buildDropdownField(
-                                "differently_abled".tr,
-                                differentlyAbledList, // e.g. ["Yes", "No"]
-                                selectedDifferentlyAbled,
-                                    (val) => setState(() => selectedDifferentlyAbled = val),
-                                isRequired: true,
-                              ),
-
-                              // ✅ Show textfield only if "Yes" is selected
-                              if (selectedDifferentlyAbled == "Yes")
-                                Padding(
-                                  padding: const EdgeInsets.only(top: 12.0),
-                                  child: TextFormField(
-                                    // controller: _differentlyAbledDetailController,
-                                    decoration: InputDecoration(
-                                      labelText: "Please_provide_disability_details".tr,
-                                      border: OutlineInputBorder(
-                                        borderRadius: BorderRadius.circular(8),
-                                      ),
-                                    ),
-                                    validator: (value) {
-                                      if (selectedDifferentlyAbled == "Yes" &&
-                                          (value == null || value.trim().isEmpty)) {
-                                        return "This_field_is_required";
-                                      }
-                                      return null;
-                                    },
-                                  ),
-                                ),
-                            ],
+                          // Differently Abled (Read-only - cannot be edited)
+                          _buildDropdownField(
+                            "differently_abled".tr,
+                            differentlyAbledList,
+                            selectedDifferentlyAbled,
+                            (val) => setState(() => selectedDifferentlyAbled = val),
+                            enabled: false,
                           ),
 
                           const SizedBox(height: 16),
+                          // Religion (Editable - optional)
                           _buildDropdownField(
                             "religion".tr,
                             religions,
                             selectedReligion,
                             (val) => setState(() => selectedReligion = val),
-                            isRequired: true,
                           ),
 
                           const SizedBox(height: 16),
 
-// Area
+// Area (Editable - optional)
                           _buildDropdownField(
                             "area".tr,
                             areas,
                             selectedArea,
                             (val) => setState(() => selectedArea = val),
-                            isRequired: true,
                           ),
 
                           const SizedBox(height: 16),
 
-// Marital Status
+// Marital Status (Editable - optional)
                           _buildDropdownField(
                             "marital_status".tr,
                             maritalStatusList,
                             selectedMaritalStatus,
                             (val) =>
                                 setState(() => selectedMaritalStatus = val),
-                            isRequired: true,
                           ),
 
                           const SizedBox(height: 16),
 
-                          // DOB
+                          // DOB (Read-only - cannot be edited)
                           _buildDateField(
-                              _label("date_of_birth".tr, required: true),
+                              _label("date_of_birth".tr),
                               _dobController,
-                              validator: (v) => v == null || v.isEmpty
-                                  ? "DOB required"
-                                  : null),
+                              enabled: false),
                           const SizedBox(height: 16),
                           //
                           _buildTextFormField(
@@ -1001,9 +967,9 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               "full_address".tr, _addressController),
                           const SizedBox(height: 16),
 
-                          // Division Dropdown
+                          // Division Dropdown (Editable - optional)
                           _buildDropdownField(
-                            _label("divisions".tr, required: true),
+                            _label("divisions".tr),
                             divisionList,
                             selectedDivisions,
                             (val) {
@@ -1013,13 +979,11 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                     null; // reset district when division changes
                               });
                             },
-                            validator: (v) =>
-                                v == null ? "Division is required" : null,
                           ),
 
                           const SizedBox(height: 16),
 
-// District Dropdown (filtered)
+// District Dropdown (Editable - optional)
                           _buildDropdownField(
                             "district".tr,
                             selectedDivisions != null ? divisionDistrictMap[selectedDivisions]! : [],
@@ -1031,17 +995,15 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                                 blockList = blockMap[val] ?? [];
                               });
                             },
-                            isRequired: true,
                           ),
 
                           const SizedBox(height: 16),
+                          // Block (Editable - optional)
                           _buildDropdownField(
-                              _label("block".tr, required: true),
+                              _label("block".tr),
                               blockList,
                               selectedBlock,
-                              (val) => setState(() => selectedBlock = val),
-                              validator: (v) =>
-                                  v == null ? "Block is required" : null),
+                              (val) => setState(() => selectedBlock = val)),
                           const SizedBox(height: 16),
 
                           // _buildDropdownField(
@@ -1052,93 +1014,39 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                           //     validator: (v) =>
                           //     v == null ? "School is required" : null),
 
+                          // School Name (Editable - optional)
                           _buildAutoCompleteField(
-                            label: _label("school_name".tr, required: true),
+                            label: _label("school_name".tr),
                             options: schoolList,
-                            selectedValue: selectedSchool,      // ✅ This shows prefilled value
+                            selectedValue: selectedSchool,
                             onSelected: (val) => setState(() => selectedSchool = val),
-                            validator: (v) => v == null || v.isEmpty ? "School is required" : null,
                           ),
 
                           const SizedBox(height: 16),
 
-                          // _buildTextFormField(
-                          //     "udise_code".tr, _udiseController),
-                          // const SizedBox(height: 16),
-                          // Visibility(
-                          //   visible: selectedClass == "12th",
-                          //   child: _buildTextFormField(
-                          //     "stream_subjects".tr,
-                          //     _streamController,
-                          //   ),
-                          // ),
-                          //
-                          // const SizedBox(height: 16),
-
+                          // Read-only fields - disabled
                           Row(
                             children: [
                               Expanded(
                                   child: _buildTextFormField(
                                       "roll_code".tr, _rollCodeController,
                                       inputType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      LengthLimitingTextInputFormatter(5),
-                                    ],
-
+                                      enabled: false,
                                   )),
                               const SizedBox(width: 10),
                               Expanded(
                                   child: _buildTextFormField(
                                       "roll_no".tr, _rollNoController,
                                       inputType: TextInputType.number,
-                                    inputFormatters: [
-                                      FilteringTextInputFormatter.digitsOnly,
-                                      LengthLimitingTextInputFormatter(8),
-                                    ],
-
+                                      enabled: false,
                                   )),
                             ],
                           ),
                           const SizedBox(height: 16),
+                          // Registration Number (Read-only)
                           _buildTextFormField(
-                              "registration_number".tr, _registrationController),
-                          const SizedBox(height: 16),
-
-                          _buildPasswordField(
-                              _label("password".tr, required: false),
-                              _isPasswordHidden,
-                                  () {
-                                setState(() =>
-                                _isPasswordHidden = !_isPasswordHidden);
-                              },
-                              _passwordController,
-                              validator: (v) {
-                                // Password is optional during profile edit
-                                if (v != null && v.isNotEmpty && v.length < 8)
-                                  return "Min 8 chars required";
-                                return null;
-                              }),
-                          const SizedBox(height: 16),
-
-                          _buildPasswordField(
-                              _label("confirm_password".tr, required: false),
-                              _isConfirmPasswordHidden,
-                                  () {
-                                setState(() => _isConfirmPasswordHidden =
-                                !_isConfirmPasswordHidden);
-                              },
-                              _confirmPasswordController,
-                              validator: (v) {
-                                // Only validate if password is being changed
-                                if (_passwordController.text.isNotEmpty) {
-                                  if (v == null || v.isEmpty)
-                                    return "Confirm Password required";
-                                  if (v != _passwordController.text)
-                                    return "Passwords do not match";
-                                }
-                                return null;
-                              }),
+                              "registration_number".tr, _registrationController,
+                              enabled: false),
                           const SizedBox(height: 20),
                           // GestureDetector(
                           //   onTap: () => {_pickImage('photo')},
@@ -1251,6 +1159,27 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
                               ),
                             ),
                           ),
+                          const SizedBox(height: 16),
+                          // Change Password Button
+                          TextButton.icon(
+                            onPressed: () {
+                              Navigator.push(
+                                context,
+                                MaterialPageRoute(
+                                  builder: (_) => const ChangePasswordProfileScreen(),
+                                ),
+                              );
+                            },
+                            icon: const Icon(Icons.lock_outline, color: Color(0xFF970202)),
+                            label: Text(
+                              "change_password".tr,
+                              style: const TextStyle(
+                                fontSize: 14,
+                                color: Color(0xFF970202),
+                                fontWeight: FontWeight.w600,
+                              ),
+                            ),
+                          ),
                         ],
                       ),
                     ),
@@ -1281,25 +1210,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         Utils.progressbar(context, CustomColors.themeColorBlack);
 
         // Build profile update data
+        // Only send fields allowed by backend DTO
         final Map<String, dynamic> profileData = {
           "fullName": _nameController.text.trim(),
           "email": _emailController.text.trim(),
-          "dob": _dobController.text.trim(),
-          "gender": selectedGender ?? '',
           "fatherName": _fatherNameController.text.trim(),
           "motherName": _motherNameController.text.trim(),
           "address": _addressController.text.trim(),
-          "rollCode": _rollCodeController.text.trim(),
-          "rollNumber": _rollNoController.text.trim(),
-          "registrationNumber": _registrationController.text.trim(),
           "schoolName": selectedSchool ?? '',
-          "class": selectedClass ?? '',
-          "stream": _streamController.text.trim(),
-          "udiseCode": _udiseController.text.trim(),
-          "aadhaarNumber": _aadhaarController.text.trim(),
           "caste": selectedCaste,
           "religion": selectedReligion,
-          "differentlyAbled": selectedDifferentlyAbled,
           "maritalStatus": selectedMaritalStatus,
           "area": selectedArea,
           "district": selectedDistrict,
@@ -1307,10 +1227,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
           "state": selectedDivisions,
         };
 
-        // Only include password if user wants to change it
-        if (_passwordController.text.isNotEmpty) {
-          profileData["password"] = _passwordController.text.trim();
-        }
+        // NOTE: Password changes should be done through ChangePasswordProfileScreen
+        // The profile update DTO does not accept password field
 
         // Use AuthController to update profile
         final authController = Get.find<AuthController>();
@@ -1353,6 +1271,31 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
         }
 
         Navigator.pop(context); // Close loading dialog
+
+        // Clear all image caches after successful uploads to show new images
+        if ((photoUploadSuccess && _selectedPhoto != null) ||
+            (signatureUploadSuccess && _selectedSignature != null)) {
+          // Clear Flutter's default image cache
+          imageCache.clear();
+          imageCache.clearLiveImages();
+          // Clear cached_network_image disk cache (used by CachedNetworkImage widget)
+          await DefaultCacheManager().emptyCache();
+
+          // Reload image URLs from SharedPreferences to update local state
+          final newPhotoUrl = await sharedPreferencesHelper.getPref("photoUrl");
+          final newSignatureUrl = await sharedPreferencesHelper.getPref("signatureUrl");
+          setState(() {
+            if (newPhotoUrl != null && newPhotoUrl.isNotEmpty) {
+              imageUrl = newPhotoUrl.trim();
+            }
+            if (newSignatureUrl != null && newSignatureUrl.isNotEmpty) {
+              signatureUrl = newSignatureUrl.trim();
+            }
+            // Clear selected files since they've been uploaded
+            _selectedPhoto = null;
+            _selectedSignature = null;
+          });
+        }
 
         // Show appropriate message based on upload results
         if (photoUploadSuccess && signatureUploadSuccess) {
@@ -1417,15 +1360,16 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
   }
 
   Widget _buildDateField(dynamic label, TextEditingController controller,
-      {String? Function(String?)? validator}) {
+      {String? Function(String?)? validator, bool? enabled}) {
     return TextFormField(
       controller: controller,
       readOnly: true,
+      enabled: enabled,
       validator: validator,
       decoration: _decoration(label).copyWith(
         suffixIcon: IconButton(
           icon: const Icon(Icons.calendar_today),
-          onPressed: () async {
+          onPressed: enabled == false ? null : () async {
             DateTime? picked = await showDatePicker(
               context: context,
               firstDate: DateTime(1900),
@@ -1513,7 +1457,8 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       String? value,
       ValueChanged<String?> onChanged, {
         String? Function(String?)? validator,
-        bool isRequired = false, // 👈 add flag for required
+        bool isRequired = false,
+        bool? enabled,
       }) {
     return DropdownButtonFormField<String>(
       value: value,
@@ -1524,7 +1469,7 @@ class _EditProfileScreenState extends State<EditProfileScreen> {
       decoration: _decoration(label, isRequired: isRequired),
       items:
       items.map((e) => DropdownMenuItem(value: e, child: Text(e))).toList(),
-      onChanged: onChanged,
+      onChanged: enabled == false ? null : onChanged,
     );
   }
 
