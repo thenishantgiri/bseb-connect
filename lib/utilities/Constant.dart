@@ -43,6 +43,11 @@ class Constant {
   static const String REVOKE_OTHER_SESSIONS = 'profile/sessions/revoke-others';
   static const String REVOKE_ALL_SESSIONS = 'profile/sessions/revoke-all';
 
+  // BSEB External API Endpoints (require JWT)
+  static const String BSEB_FORM_DATA = 'bseb/form-data';  // + /:registrationNumber
+  static const String BSEB_ADMIT_CARD_THEORY = 'bseb/admit-card/theory';
+  static const String BSEB_ADMIT_CARD_PRACTICAL = 'bseb/admit-card/practical';
+
   // ==================== LEGACY API ENDPOINTS (OLD BACKEND) ====================
   // These are kept for backward compatibility with screens not yet migrated
 
