@@ -111,7 +111,7 @@ jobs:
 
       - name: Upload coverage
         if: always()
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: backend-coverage
           path: backend/coverage/
@@ -141,7 +141,7 @@ jobs:
         run: pnpm run build
 
       - name: Upload build artifacts
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: backend-build
           path: |
@@ -216,7 +216,7 @@ jobs:
 
       - name: Upload build artifacts
         if: matrix.platform == 'android'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: flutter-${{ matrix.platform }}-build
           path: |
@@ -225,7 +225,7 @@ jobs:
 
       - name: Upload web artifacts
         if: matrix.platform == 'web'
-        uses: actions/upload-artifact@v3
+        uses: actions/upload-artifact@v5
         with:
           name: flutter-web-build
           path: build/web/
